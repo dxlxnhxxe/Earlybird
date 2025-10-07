@@ -1,25 +1,24 @@
-import logo from './logo.svg';
+
+import React from 'react';
+import { Routes, Route, useParams, useNavigate } from 'react-router-dom';
+import MainPage, { users } from './pages/MainPage';
+import LoginPin from './pages/LoginPin';
 import './App.css';
 
-function App() {
+const LoginPinWrapper = () => {
+  const { id } = useParams();
+  const user = users.find(u => u.id === id);
+  return <LoginPin user={user} />;
+};
+
+const App = () => {
+  const navigate = useNavigate();
   return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
-    </div>
+    <Routes>
+      <Route path="/" element={<MainPage navigate={navigate} />} />
+      <Route path="/login/:id" element={<LoginPinWrapper />} />
+    </Routes>
   );
-}
+};
 
 export default App;
