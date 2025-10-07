@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 
 const users = [
   { id: 'leonie-raymonde', name: 'Leonie Raymonde', role: 'admin', status: 'available' },
@@ -14,7 +14,11 @@ const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", 
 const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
 const MainPage = ({ navigate }) => {
-  const now = new Date();
+  const [now, setNow] = useState(new Date());
+  useEffect(() => {
+    const interval = setInterval(() => setNow(new Date()), 1000);
+    return () => clearInterval(interval);
+  }, []);
   const dayName = days[now.getDay()];
   const day = now.getDate();
   const month = months[now.getMonth()];
