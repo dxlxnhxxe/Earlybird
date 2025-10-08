@@ -13,7 +13,7 @@ const RootComponent: React.FC = () => {
         <Router>
             <Routes>
                 <Route path="*" element={<NotFoundPage />} />
-                <Route path={ROUTES.HOMEPAGE_ROUTE} element={<HomePage />} />
+                <Route path={ROUTES.KIOSK_INDEX_ROUTE} element={<HomePage />} />
                 <Route path={ROUTES.KIOSK_LOGIN_ROUTE} element={<LoginPin />} />
             </Routes>
         </Router>

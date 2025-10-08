@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import DateTime from '../../components/DateTime';
 import { useNavigate } from 'react-router-dom';
 import { useSearchParams } from 'react-router-dom';
 import '../../styles/kiosk_login.css';
@@ -39,24 +40,12 @@ const LoginPin = () => {
     }
   };
 
-  // Sidebar content (copied from HomePage)
-  const now = new Date();
-  const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-  const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-  const dayName = days[now.getDay()];
-  const day = now.getDate();
-  const month = months[now.getMonth()];
-  const hours = now.getHours().toString().padStart(2, '0');
-  const minutes = now.getMinutes().toString().padStart(2, '0');
 
   return (
     <div className="app">
       <div className="sidebar">
         <div className="logo"><img src="/logoEarlybird.png" alt="EarlyBird Logo" /></div>
-        <div className="date-time">
-          <div className="date">{`${dayName}, ${day} ${month}`}</div>
-          <div className="time">{`${hours}:${minutes}`}</div>
-        </div>
+        <DateTime />
         <div className="location">Epitech Paris, France</div>
       </div>
       <div className="main" style={{ position: 'relative' }}>

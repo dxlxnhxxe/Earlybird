@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
+import DateTime from '../components/DateTime';
 import { useNavigate } from 'react-router-dom';
 import '../styles/kiosk_home.sass';
 
@@ -12,39 +13,26 @@ const users = [
   { id: 'olivia-johnson', name: 'Olivia Johnson', status: 'unavailable' },
 ];
 
-const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
-interface HomePageProps {
-  navigate: (path: string) => void;
-}
-
-const HomePage: React.FC<HomePageProps> = () => {
+const HomePage: React.FC = () => {
   const navigate = useNavigate();
-  const [now, setNow] = useState(new Date());
-  useEffect(() => {
-    const interval = setInterval(() => setNow(new Date()), 1000);
-    return () => clearInterval(interval);
-  }, []);
-  const dayName = days[now.getDay()];
-  const day = now.getDate();
-  const month = months[now.getMonth()];
-  const hours = now.getHours().toString().padStart(2, '0');
-  const minutes = now.getMinutes().toString().padStart(2, '0');
 
   return (
     <div className="app">
       <div className="sidebar">
-        <div className="logo"><img src="./logoEarlybird.png" alt="EarlyBird Logo" /></div>
-        <div className="date-time">
-          <div className="date">{`${dayName}, ${day} ${month}`}</div>
-          <div className="time">{`${hours}:${minutes}`}</div>
-        </div>
+        <div className="logo"><img src="/logoEarlybird.png" alt="EarlyBird Logo" /></div>
+        <DateTime />
         <div className="location">Epitech Paris, France</div>
       </div>
       <div className="main">
         <div className="search-bar">
           <input type="text" placeholder="Search" />
+          <span className="search-icon" aria-hidden="true">
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <circle cx="9" cy="9" r="7" stroke="#b0b3b8" strokeWidth="2" />
+              <line x1="14.4142" y1="14" x2="18" y2="17.5858" stroke="#b0b3b8" strokeWidth="2" strokeLinecap="round" />
+            </svg>
+          </span>
         </div>
         <div className="user-list">
           {users.map((user) => (
