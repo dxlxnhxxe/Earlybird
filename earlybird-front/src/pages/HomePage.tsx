@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import '../styles/kiosk_home.sass';
 
 const users = [
   { id: 'leonie-raymonde', name: 'Leonie Raymonde', role: 'admin', status: 'available' },
@@ -13,7 +15,12 @@ const users = [
 const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
-const MainPage = ({ navigate }) => {
+interface HomePageProps {
+  navigate: (path: string) => void;
+}
+
+const HomePage: React.FC<HomePageProps> = () => {
+  const navigate = useNavigate();
   const [now, setNow] = useState(new Date());
   useEffect(() => {
     const interval = setInterval(() => setNow(new Date()), 1000);
@@ -41,7 +48,7 @@ const MainPage = ({ navigate }) => {
         </div>
         <div className="user-list">
           {users.map((user) => (
-            <div key={user.id} className="user-item" style={{ cursor: 'pointer' }} onClick={() => navigate(`/login/${user.id}`)}>
+            <div key={user.id} className="user-item" style={{ cursor: 'pointer' }} onClick={() => navigate(`/kiosk/login?userId=${user.id}`)}>
                 <img
                   src={`https://api.dicebear.com/9.x/thumbs/svg?seed=${encodeURIComponent(user.name)}&scale=80&backgroundColor=transparent`}
                   alt={user.name}
@@ -62,4 +69,4 @@ const MainPage = ({ navigate }) => {
 };
 
 export { users };
-export default MainPage;
+export default HomePage;
