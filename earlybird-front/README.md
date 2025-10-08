@@ -1,4 +1,4 @@
-<h1 align="center">New React App</h1>
+<h1 align="center">EarlyBird</h1>
 
 # Usage
 

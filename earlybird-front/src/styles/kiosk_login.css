@@ -1,3 +1,12 @@
+.app {
+  display: flex;
+  width: 100vw;
+  height: 100vh;
+  min-height: 100vh;
+  min-width: 100vw;
+  border-radius: 0;
+  overflow: hidden;
+}
 .login-pin-back-button {
   position: absolute;
   top: 24px;
@@ -30,7 +39,7 @@
   width: 100%;
   min-height: 100%;
   margin: 0 auto;
-  padding: 0 12px;
+  padding: 0 18px;
 }
 
  .login-pin-greeting {
@@ -42,17 +51,17 @@
 }
 
  .login-pin-avatar {
-  width: 70px;
-  height: 70px;
+  width: 80px;
+  height: 80px;
   border-radius: 50%;
-  margin-bottom: 12px;
+  margin-bottom: 14px;
   background: #f0f0f0;
 }
 
  .login-pin-greeting h1 {
-  font-size: 1.25rem;
+  font-size: 1.4rem;
   font-weight: 600;
-  margin: 0 0 8px 0;
+  margin: 0 0 10px 0;
 }
 
  .login-pin-pin-input-container {
@@ -63,22 +72,22 @@
 }
 
  .login-pin-pin-input-container p {
-  margin-bottom: 12px;
+  margin-bottom: 14px;
   color: #444;
-  font-size: 1rem;
+  font-size: 1.05rem;
 }
 
  .login-pin-pin-input {
   display: flex;
-  gap: 12px;
-  margin-bottom: 8px;
+  gap: 14px;
+  margin-bottom: 10px;
 }
 
  .login-pin-pin-dot {
-  width: 36px;
-  height: 36px;
-  border: 2px solid #e0e0e0;
-  border-radius: 8px;
+  width: 40px;
+  height: 40px;
+  border: 2.5px solid #e0e0e0;
+  border-radius: 9px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -93,18 +102,18 @@
 
  .login-pin-keypad {
   display: grid;
-  grid-template-columns: repeat(3, 48px);
-  grid-gap: 14px;
+  grid-template-columns: repeat(3, 56px);
+  grid-gap: 16px;
   justify-content: center;
   margin: 22px 0 12px 0;
 }
  .login-pin-keypad-button {
-  width: 48px;
-  height: 48px;
+  width: 56px;
+  height: 56px;
   border-radius: 50%;
   background: #23292f;
   color: #fff;
-  font-size: 1.35rem;
+  font-size: 1.5rem;
   border: none;
   outline: none;
   box-shadow: 0 2px 8px rgba(0,0,0,0.08);
@@ -123,7 +132,7 @@
 }
 
  .login-pin-forgot {
-  margin-top: 14px;
+  margin-top: 16px;
 }
  .login-pin-forgot a {
   color: #1c799f;
