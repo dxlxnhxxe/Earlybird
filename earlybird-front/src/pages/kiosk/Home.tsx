@@ -1,6 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import DateTime from '../../components/DateTime';
-import '../../styles/kiosk_index.sass';
+import AnimatedPopup from '../../components/AnimatedPopup';
+import '../../styles/kiosk_login.css';
+import '../../styles/kiosk_home_main.css';
 
 const users = [
   { id: 'leonie-raymonde', name: 'Leonie Raymonde', role: 'admin', status: 'available' },
@@ -12,8 +15,9 @@ const users = [
   { id: 'olivia-johnson', name: 'Olivia Johnson', status: 'unavailable' },
 ];
 
-
 const HomePage: React.FC = () => {
+  const navigate = useNavigate();
+  const [showPopup, setShowPopup] = useState(false);
 
   return (
     <div className="app">
@@ -22,8 +26,39 @@ const HomePage: React.FC = () => {
         <DateTime />
         <div className="location">Epitech Paris, France</div>
       </div>
-      <div className="main">
-        <h1>Welcome to EarlyBird Kiosk</h1>
+      <div className="main" style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh' }}>
+        <button
+          className="login-pin-keypad-button login-pin-back-button"
+          style={{ position: 'absolute', top: 24, left: 0, zIndex: 2 }}
+          onClick={() => navigate(-1)}
+          aria-label="Back"
+        >
+          ←
+        </button>
+        <div style={{ width: 280, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 24 }}>
+          <div style={{ textAlign: 'center', marginBottom: 40 }}>
+            <div className="home-main-title">Clock in to</div>
+            <div className="home-main-subtitle">Westside Branch</div>
+          </div>
+          <button className="home-action-btn" onClick={() => setShowPopup(true)}>
+            <span style={{ fontSize: '2rem', display: 'flex', alignItems: 'center' }}>🕒</span>
+            Clock in
+          </button>
+          <button className="home-action-btn orange">
+            <span style={{ fontSize: '2rem', display: 'flex', alignItems: 'center' }}>☕</span>
+            Start break
+          </button>
+        </div>
+        <AnimatedPopup
+          open={showPopup}
+          onClose={() => setShowPopup(false)}
+          icon={<span style={{ fontSize: '2.5em' }}>✔️</span>}
+          title="Clocked in!"
+          subtitle="Epitech Paris, France"
+          countdown={3}
+          countdownText="This screen will close in"
+          background="#8fd16a"
+        />
       </div>
     </div>
   );
