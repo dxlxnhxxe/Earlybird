@@ -7,40 +7,39 @@ import { TextEncoder, TextDecoder } from 'util'
 Object.assign(global, { TextDecoder, TextEncoder })
 
 import { BrowserRouter as Router } from 'react-router-dom'
-import HomePage, { users } from '../../../pages/kiosk/Index'
+import LoginPin from '../../../pages/kiosk/Login'
 import '@testing-library/jest-dom'
 
-describe('HomePage', () => {
+describe('LoginPin', () => {
   it('renders the Epitech location', () => {
     render(
       <Router>
-        <HomePage />
+        <LoginPin />
       </Router>
     )
     expect(screen.getByText(/Epitech Paris, France/i)).toBeInTheDocument()
   })
 
-  it('renders all users in the user list', () => {
+  it('renders the greeting and avatar', () => {
     render(
       <Router>
-        <HomePage />
+        <LoginPin />
       </Router>
     )
-    users.forEach(user => {
-      expect(screen.getByText(user.name)).toBeInTheDocument()
-    })
+    expect(screen.getByText(/Hello/i)).toBeInTheDocument()
+    const avatar = screen.getByAltText(/User Avatar/i)
+    expect(avatar).toBeInTheDocument()
   })
 
-  it('renders avatars for each user', () => {
+  it('renders the keypad buttons', () => {
     render(
       <Router>
-        <HomePage />
+        <LoginPin />
       </Router>
     )
-    users.forEach(user => {
-      const avatar = screen.getByAltText(user.name)
-      expect(avatar).toBeInTheDocument()
-      expect(avatar).toHaveClass('avatar')
-    })
+    for (let i = 0; i <= 9; i++) {
+      expect(screen.getByText(i.toString())).toBeInTheDocument()
+    }
+    expect(screen.getByText('✕')).toBeInTheDocument()
   })
 })
