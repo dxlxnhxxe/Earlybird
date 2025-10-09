@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
   php:
-    image: php:8.2-cli
+    build: .
     container_name: symfony_app
     working_dir: /app
     volumes:
@@ -13,18 +13,17 @@ services:
     depends_on:
       - database
     environment:
-      DATABASE_URL: "postgresql://symfony:symfony@db:5432/symfony?serverVersion=15&charset=utf8"
-
+      DATABASE_URL: "postgresql://symfony:symfony@database:5432/symfony?serverVersion=15&charset=utf8"
 ###> doctrine/doctrine-bundle ###
   database:
     image: postgres:${POSTGRES_VERSION:-16}-alpine
     environment:
-      POSTGRES_DB: ${POSTGRES_DB:-symfony}
+      POSTGRES_DB: ${POSTGRES_DB:-database}
       # You should definitely change the password in production
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-symfony}
       POSTGRES_USER: ${POSTGRES_USER:-symfony}
     healthcheck:
-      test: ["CMD", "pg_isready", "-d", "${POSTGRES_DB:-symfony}", "-U", "${POSTGRES_USER:-symfony}"]
+      test: ["CMD", "pg_isready", "-d", "${POSTGRES_DB:-database}", "-U", "${POSTGRES_USER:-symfony}"]
       timeout: 5s
       retries: 5
       start_period: 60s
