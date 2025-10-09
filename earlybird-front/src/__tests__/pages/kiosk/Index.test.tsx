@@ -3,10 +3,10 @@
  */
 import { render, screen } from '@testing-library/react'
 import '@testing-library/jest-dom'
-import HomePage from '../../pages/HomePage'
+import IndexPage from '../../../pages/kiosk/Index'
 
-test('renders hello world message', () => {
-    render(<HomePage />)
-    const greetings = screen.getByText(/Hello world/i)
+test('renders Epitech message', () => {
+    render(<IndexPage />)
+    const greetings = screen.getByText(/Epitech/i)
     expect(greetings).toBeInTheDocument()
 })

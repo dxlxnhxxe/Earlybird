@@ -1,7 +1,7 @@
 import React from 'react';
-import DateTime from '../components/DateTime';
+import DateTime from '../../components/DateTime';
 import { useNavigate } from 'react-router-dom';
-import '../styles/kiosk_home.sass';
+import '../../styles/kiosk_index.sass';
 
 const users = [
   { id: 'leonie-raymonde', name: 'Leonie Raymonde', role: 'admin', status: 'available' },
@@ -14,7 +14,7 @@ const users = [
 ];
 
 
-const HomePage: React.FC = () => {
+const IndexPage: React.FC = () => {
   const navigate = useNavigate();
 
   return (
@@ -57,4 +57,4 @@ const HomePage: React.FC = () => {
 };
 
 export { users };
-export default HomePage;
+export default IndexPage;

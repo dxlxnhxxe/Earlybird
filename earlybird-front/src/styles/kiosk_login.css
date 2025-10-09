@@ -25,7 +25,17 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: background 0.2s;
+  transition: background 0.15s, box-shadow 0.15s, transform 0.08s;
+}
+.login-pin-back-button:hover {
+  background: #353b40;
+  box-shadow: 0 2px 8px rgba(0, 120, 212, 0.08);
+  transform: translateY(-2px) scale(1.04);
+}
+.login-pin-back-button:active {
+  background: #1a1f23;
+  box-shadow: 0 1px 4px rgba(0, 120, 212, 0.10);
+  transform: scale(0.97);
 }
 .login-pin-app {
   display: flex;
@@ -118,17 +128,30 @@
   outline: none;
   box-shadow: 0 2px 8px rgba(0,0,0,0.08);
   cursor: pointer;
-  transition: background 0.2s;
+  transition: background 0.15s, box-shadow 0.15s, transform 0.08s;
   display: flex;
   align-items: center;
   justify-content: center;
 }
- .login-pin-keypad-button:active {
+.login-pin-keypad-button:hover {
+  background: #353b40;
+  box-shadow: 0 2px 8px rgba(0, 120, 212, 0.08);
+  transform: translateY(-2px) scale(1.04);
+}
+.login-pin-keypad-button:active {
   background: #1a1f23;
+  box-shadow: 0 1px 4px rgba(0, 120, 212, 0.10);
+  transform: scale(0.97);
 }
  .login-pin-delete-button {
   background: #e0e0e0;
   color: #23292f;
+}
+.login-pin-delete-button:hover {
+  background: #f0f0f0;
+}
+.login-pin-delete-button:active {
+  background: #d0d0d0;
 }
 
  .login-pin-forgot {

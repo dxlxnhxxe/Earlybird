@@ -28,6 +28,11 @@ const LoginPin = () => {
       const newPin = [...pin];
       newPin[firstEmptyIndex] = key;
       setPin(newPin);
+
+      if(firstEmptyIndex === 3) {
+        // Submit the PIN
+        navigate('/kiosk/home');
+      }
     }
   };
 

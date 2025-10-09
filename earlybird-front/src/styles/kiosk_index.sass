@@ -83,11 +83,23 @@ body
   padding: 0
   margin: 0
 
+
 .user-item
   display: flex
   align-items: center
   padding: 10px
   border-bottom: 1px solid #eee
+  border-radius: 12px
+  transition: background 0.15s, box-shadow 0.15s, transform 0.08s
+  cursor: pointer
+  &:hover
+    background: #f0f4ff
+    box-shadow: 0 2px 8px rgba(0, 120, 212, 0.08)
+    transform: translateY(-2px) scale(1.02)
+  &:active
+    background: #e0e7ff
+    box-shadow: 0 1px 4px rgba(0, 120, 212, 0.10)
+    transform: scale(0.98)
 
 .avatar
   width: 40px

@@ -40,7 +40,7 @@ const NotFoundPage: React.FC = () => {
                 You'll be redirected to the home page in {seconds} second
                 <span style={{ display: 'inline-block', width: '0.65em', overflow: 'hidden', verticalAlign: 'bottom' }}>
                     {seconds !== 1 ? 's' : <span style={{ opacity: 0 }}>s</span>}
-                </span>.
+                </span>
             </span>
         </div>
     )
