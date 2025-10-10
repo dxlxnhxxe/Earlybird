@@ -15,3 +15,8 @@ team_create:
     path: /teams
     controller: App\Controller\TeamsController::createTeam
     methods: [POST]
+
+team_list:
+    path: /teams
+    controller: App\Controller\TeamsController::listTeams
+    methods: [GET]

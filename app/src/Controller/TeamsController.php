@@ -49,4 +49,24 @@ class TeamsController
             ]
         ], 201);
     }
+
+    #[Route('/teams', name: 'team_list', methods: ['GET'])]
+public function listTeams(EntityManagerInterface $em): JsonResponse
+{
+    $teams = $em->getRepository(Team::class)->findAll();
+
+    // Transformer les entités en tableau simple
+    $data = array_map(function ($team) {
+        return [
+            'id' => $team->getId(),
+            'name' => $team->getName(),
+            'description' => $team->getDescription(),
+            'members' => $team->getMembers(),
+            'manager' => $team->getManager(),
+        ];
+    }, $teams);
+
+    return new JsonResponse($data, 200);
+}
+
 }
