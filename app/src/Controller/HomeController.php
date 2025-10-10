@@ -27,7 +27,7 @@ class HomeController extends AbstractController
     }
 
     // Ajoutez cette méthode pour gérer la création d'un utilisateur
-    #[Route('/user/create', name: 'user_create', methods: ['POST'])]
+    #[Route('/users', name: 'user_create', methods: ['POST'])]
 public function createUser(Request $request, EntityManagerInterface $em): JsonResponse
 {
     // Décoder le JSON reçu
@@ -59,4 +59,37 @@ public function createUser(Request $request, EntityManagerInterface $em): JsonRe
     return new JsonResponse(['status' => 'User created successfully'], 201);
 }
 
+    #[Route('/users', name: 'user_delete', methods: ['DELETE'])]
+    public function deleteUser(Request $request, EntityManagerInterface $em): JsonResponse
+    {
+        //verifier la commande
+        $command = $request->getContent();
+        $data = json_decode($command, true);
+        $id = $data['id'];
+        $user = $this->em->getRepository(User::class)->find($id);
+        if (!$user){
+            return new JsonResponse(['error' => 'User to delete not found'], 404);
+        }
+        $this->em->remove($user);
+        $this->em->flush();
+        return new JsonResponse(['status' => 'User deleted successfully'], 200);
+    }
+
+    #[Route('/users', name: 'user_display', methods: ['GET'])]
+    public function displayUser(EntityManagerInterface $em): JsonResponse
+    {
+        $users = $em->getRepository(User::class)->findAll();
+        $data = array_map(function ($user) {
+            return [
+                'id' => $user->getId(),
+                'firstname' => $user->getFirstname(),
+                'lastname' => $user->getLastname(),
+                'email' => $user->getEmail(),
+                'phone_number' => $user->getPhoneNumber(),
+                'role' => $user->getRole(),
+                'code_pin' => $user->getCodePin(),
+            ];
+        }, $users);
+        return new JsonResponse($data, 200);
+    }
 }
