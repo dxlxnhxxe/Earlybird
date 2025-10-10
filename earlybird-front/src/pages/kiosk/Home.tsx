@@ -52,7 +52,7 @@ const HomePage: React.FC = () => {
         <AnimatedPopup
           open={showPopup}
           onClose={() => setShowPopup(false)}
-          icon={<span style={{ fontSize: '2.5em' }}>✔️</span>}
+          icon={<img src='/checkmark-round.svg' alt='Checkmark' style={{ width: '2.5em', height: '2.5em' }} />}
           title="Clocked in!"
           subtitle="Epitech Paris, France"
           countdown={3}
