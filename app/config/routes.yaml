@@ -10,3 +10,8 @@ user_create:
     path: /user/create
     controller: App\Controller\HomeController::createUser
     methods: [POST]
+
+team_create:
+    path: /teams
+    controller: App\Controller\TeamsController::createTeam
+    methods: [POST]
