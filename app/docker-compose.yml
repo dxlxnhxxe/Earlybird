@@ -13,7 +13,7 @@ services:
     depends_on:
       - database
     environment:
-      DATABASE_URL: "postgresql://symfony:symfony@database:5432/symfony?serverVersion=15&charset=utf8"
+      DATABASE_URL: "postgresql://symfony:symfony@database:5432/database?serverVersion=15&charset=utf8"
 ###> doctrine/doctrine-bundle ###
   database:
     image: postgres:${POSTGRES_VERSION:-16}-alpine
