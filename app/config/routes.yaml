@@ -12,7 +12,7 @@ user_create:
     methods: [POST]
 
 user_delete:
-    path: /users
+    path: /users/{id}
     controller: App\Controller\HomeController::deleteUser
     methods: [DELETE]
 
@@ -20,6 +20,11 @@ user_display:
     path: /users
     controller: App\Controller\HomeController::displayUser
     methods: [GET]
+
+user_update:
+    path: /users/{id}
+    controller: App\Controller\HomeController::updateUser
+    methods: [PUT]
 
 team_create:
     path: /teams
