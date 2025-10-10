@@ -7,9 +7,19 @@ homepage:
     controller: App\Controller\HomeController::index
 
 user_create:
-    path: /user/create
+    path: /users
     controller: App\Controller\HomeController::createUser
     methods: [POST]
+
+user_delete:
+    path: /users
+    controller: App\Controller\HomeController::deleteUser
+    methods: [DELETE]
+
+user_display:
+    path: /users
+    controller: App\Controller\HomeController::displayUser
+    methods: [GET]
 
 team_create:
     path: /teams
