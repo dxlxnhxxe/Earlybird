@@ -8,7 +8,7 @@ services:
         autowire: true      # Automatically inject dependencies in your services
         autoconfigure: true # Automatically registers your services as commands, event subscribers, etc.
 
-    # ✅ Automatically load all classes in src/ (except excluded folders)
+    # Automatically load all classes in src/ (except excluded folders)
     App\:
         resource: '../src/*'
         exclude:
@@ -16,12 +16,12 @@ services:
             - '../src/Entity/'
             - '../src/Kernel.php'
 
-    # ✅ Make controllers available as services
+    #  Make controllers available as services
     App\Controller\:
         resource: '../src/Controller'
         tags: ['controller.service_arguments']
 
-    # ✅ Explicitly register repositories for Doctrine
+    #  Explicitly register repositories for Doctrine
     App\Repository\:
         resource: '../src/Repository'
         tags: ['doctrine.repository_service']
