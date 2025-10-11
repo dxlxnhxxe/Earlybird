@@ -4,6 +4,8 @@ namespace App\Entity;
 
 use App\Repository\UserRepository;
 use Doctrine\ORM\Mapping as ORM;
+use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\Common\Collections\Collection;
 
 #[ORM\Entity(repositoryClass: UserRepository::class)]
 #[ORM\Table(name: '`user`')]
@@ -114,6 +116,52 @@ class User
     public function setCodePin(int $code_pin): static
     {
         $this->code_pin = $code_pin;
+        return $this;
+    }
+
+    #[ORM\OneToOne(mappedBy: 'manager', targetEntity: Team::class)]
+    private ?Team $managedTeam = null;
+
+    #[ORM\ManyToMany(targetEntity: Team::class, mappedBy: 'members')]
+    private Collection $teams;
+
+    public function __construct()
+    {
+        $this->teams = new ArrayCollection();
+    }
+
+    public function getManagedTeam(): ?Team
+    {
+        return $this->managedTeam;
+    }
+
+    public function setManagedTeam(?Team $team): static
+    {
+        $this->managedTeam = $team;
+        return $this;
+    }
+
+    public function getTeams(): Collection
+    {
+        return $this->teams;
+    }
+
+    public function addTeam(Team $team): static
+    {
+        if (!$this->teams->contains($team)) {
+            $this->teams->add($team);
+            $team->addMember($this);
+        }
+
+        return $this;
+    }
+
+    public function removeTeam(Team $team): static
+    {
+        if ($this->teams->removeElement($team)) {
+            $team->removeMember($this);
+        }
+
         return $this;
     }
 }
