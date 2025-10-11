@@ -5,6 +5,18 @@
 --
 
 -- =========================================================
+-- 🔹 CREATE DATABASE (if not exists)
+-- =========================================================
+DO
+$$
+BEGIN
+   IF NOT EXISTS (SELECT FROM pg_database WHERE datname = 'database') THEN
+      PERFORM dblink_exec('dbname=postgres', 'CREATE DATABASE database');
+   END IF;
+END
+$$;
+
+-- =========================================================
 -- 🔹 TABLE: user
 -- =========================================================
 CREATE TABLE IF NOT EXISTS "user" (

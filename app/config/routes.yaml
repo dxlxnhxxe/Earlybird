@@ -7,9 +7,24 @@ homepage:
     controller: App\Controller\HomeController::index
 
 user_create:
-    path: /user/create
+    path: /users
     controller: App\Controller\HomeController::createUser
     methods: [POST]
+
+user_delete:
+    path: /users/{id}
+    controller: App\Controller\HomeController::deleteUser
+    methods: [DELETE]
+
+user_display:
+    path: /users
+    controller: App\Controller\HomeController::displayUser
+    methods: [GET]
+
+user_update:
+    path: /users/{id}
+    controller: App\Controller\HomeController::updateUser
+    methods: [PUT]
 
 team_create:
     path: /teams
@@ -20,13 +35,3 @@ team_list:
     path: /teams
     controller: App\Controller\TeamsController::listTeams
     methods: [GET]
-
-team_update:
-    path: /teams/{id}
-    controller: App\Controller\TeamsController::updateTeam
-    methods: [PUT]
-
-team_delete:
-    path: /teams/{id}
-    controller: App\Controller\TeamsController::deleteTeam
-    methods: [DELETE]

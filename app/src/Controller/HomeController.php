@@ -27,7 +27,7 @@ class HomeController extends AbstractController
     }
 
     // Ajoutez cette méthode pour gérer la création d'un utilisateur
-    #[Route('/user/create', name: 'user_create', methods: ['POST'])]
+    #[Route('/users', name: 'user_create', methods: ['POST'])]
 public function createUser(Request $request, EntityManagerInterface $em): JsonResponse
 {
     // Décoder le JSON reçu
@@ -58,5 +58,59 @@ public function createUser(Request $request, EntityManagerInterface $em): JsonRe
 
     return new JsonResponse(['status' => 'User created successfully'], 201);
 }
+
+    #[Route('/users/{id}', name: 'user_delete', methods: ['DELETE'])]
+    public function deleteUser(int $id, Request $request, EntityManagerInterface $em): JsonResponse
+    {
+        $user = $em->getRepository(User::class)->find($id);
+        if (!$user){
+            return new JsonResponse(['error' => 'User to delete not found'], 404);
+        }
+        $em->remove($user);
+        $em->flush();
+        return new JsonResponse(['status' => 'User deleted successfully'], 200);
+    }
+
+    #[Route('/users', name: 'user_display', methods: ['GET'])]
+    public function displayUser(EntityManagerInterface $em): JsonResponse
+    {
+        $users = $em->getRepository(User::class)->findAll();
+        $data = array_map(function ($user) {
+            return [
+                'id' => $user->getId(),
+                'firstname' => $user->getFirstname(),
+                'lastname' => $user->getLastname(),
+                'email' => $user->getEmail(),
+                'phone_number' => $user->getPhoneNumber(),
+                'role' => $user->getRole(),
+                'code_pin' => $user->getCodePin(),
+            ];
+        }, $users);
+        return new JsonResponse($data, 200);
+    }
+
+    #[Route('/users/{id}', name: 'user_update', methods: ['PUT'])]
+    public function updateUser(int $id, Request $request, EntityManagerInterface $em): JsonResponse
+    {
+        $user = $em->getRepository(User::class)->find($id);
+        if (!$user){
+            return new JsonResponse(['error' => 'User to update not found'], 404);
+        }
+        $data = json_decode($request->getContent(), true);
+        if(!$data){
+            return new JsonResponse(['error' => 'Invalid or missing JSON body'], 400);
+        }
+        if(isset($data['firstname'])) $user->setFirstname($data['firstname']);
+        if(isset($data['lastname'])) $user->setLastname($data['lastname']);
+        if(isset($data['email'])) $user->setEmail($data['email']);
+        if(isset($data['phone_number'])) $user->setPhoneNumber($data['phone_number']);
+        if(isset($data['role'])) $user->setRole($data['role']);
+        if(isset($data['code_pin'])) $user->setCodePin($data['code_pin']);
+        if(isset($data['password'])) $user->setPassword(password_hash($data['password'], PASSWORD_BCRYPT));
+
+        //Perist est optionel puisque $user est deja manage
+        $em->flush();
+        return new JsonResponse(['status' => 'User updated successfully'], 200);
+    }
 
 }
