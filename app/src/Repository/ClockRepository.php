@@ -16,7 +16,7 @@ class ClockRepository extends ServiceEntityRepository
         parent::__construct($registry, Clock::class);
     }
 
-    // 🔎 Exemple de méthode personnalisée (facultatif)
+    // Exemple de méthode personnalisée (facultatif)
     public function findRecentClocksByUser(int $userId, int $limit = 10): array
     {
         return $this->createQueryBuilder('c')
