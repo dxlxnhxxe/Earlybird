@@ -10,7 +10,7 @@ use Doctrine\Migrations\AbstractMigration;
 /**
  * Auto-generated Migration: Please modify to your needs!
  */
-final class Version20251010145804 extends AbstractMigration
+final class Version20251011181009 extends AbstractMigration
 {
     public function getDescription(): string
     {
@@ -20,6 +20,9 @@ final class Version20251010145804 extends AbstractMigration
     public function up(Schema $schema): void
     {
         // this up() migration is auto-generated, please modify it to your needs
+        $this->addSql('CREATE TABLE "clock" (id SERIAL NOT NULL, user_id INT NOT NULL, timestamp TIMESTAMP(0) WITHOUT TIME ZONE NOT NULL, type VARCHAR(20) NOT NULL, PRIMARY KEY(id))');
+        $this->addSql('CREATE INDEX IDX_BE7BBE92A76ED395 ON "clock" (user_id)');
+        $this->addSql('ALTER TABLE "clock" ADD CONSTRAINT FK_BE7BBE92A76ED395 FOREIGN KEY (user_id) REFERENCES "user" (id) ON DELETE CASCADE NOT DEFERRABLE INITIALLY IMMEDIATE');
         $this->addSql('DROP INDEX IDX_C4E0A61F783E3463');
         $this->addSql('CREATE UNIQUE INDEX UNIQ_C4E0A61F783E3463 ON team (manager_id)');
         $this->addSql('DROP INDEX user_email_key');
@@ -37,6 +40,8 @@ final class Version20251010145804 extends AbstractMigration
     {
         // this down() migration is auto-generated, please modify it to your needs
         $this->addSql('CREATE SCHEMA public');
+        $this->addSql('ALTER TABLE "clock" DROP CONSTRAINT FK_BE7BBE92A76ED395');
+        $this->addSql('DROP TABLE "clock"');
         $this->addSql('ALTER TABLE "user" ALTER id DROP DEFAULT');
         $this->addSql('ALTER TABLE "user" ALTER firstname DROP NOT NULL');
         $this->addSql('ALTER TABLE "user" ALTER lastname DROP NOT NULL');

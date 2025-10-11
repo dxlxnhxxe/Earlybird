@@ -35,3 +35,14 @@ team_list:
     path: /teams
     controller: App\Controller\TeamsController::listTeams
     methods: [GET]
+
+team_delete:
+    path: /teams/{id}
+    controller: App\Controller\TeamsController::deleteTeam
+    methods: [DELETE]
+
+team_update:
+    path: /teams/{id}
+    controller: App\Controller\TeamsController::updateTeam
+    methods: [PUT]
+

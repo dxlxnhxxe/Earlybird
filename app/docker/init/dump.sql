@@ -52,3 +52,15 @@ INSERT INTO "team" (name, description, members, manager) VALUES
 ('Backend Team', 'Responsible for APIs and data layer', '["Alice", "Bob"]', 'Clara Admin'),
 ('DevOps Team', 'Handles deployment and CI/CD pipelines', '["Clara", "Bob"]', 'Alice Durand'),
 ('AI Team', 'Focuses on machine learning models', '["Alice", "Clara"]', 'Bob Martin');
+
+
+-- =========================================================
+-- 🔹 TABLE: cloc     k
+-- =========================================================
+CREATE TABLE IF NOT EXISTS clock (
+    id SERIAL PRIMARY KEY,
+    timestamp TIMESTAMP NOT NULL DEFAULT NOW(),
+    type VARCHAR(50) NOT NULL,
+    user_id INTEGER REFERENCES "user"(id) ON DELETE CASCADE
+);
+-- ✅ Données d’exemple pour la table clock
