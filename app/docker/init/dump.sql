@@ -43,19 +43,18 @@ CREATE TABLE IF NOT EXISTS "team" (
     id SERIAL PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
     description TEXT,
-    members JSON,
-    manager VARCHAR(255)
+    manager_id INTEGER REFERENCES "user"(id) ON DELETE SET NULL
 );
 
--- ✅ Données d’exemple pour la table team
-INSERT INTO "team" (name, description, members, manager) VALUES
-('Backend Team', 'Responsible for APIs and data layer', '["Alice", "Bob"]', 'Clara Admin'),
-('DevOps Team', 'Handles deployment and CI/CD pipelines', '["Clara", "Bob"]', 'Alice Durand'),
-('AI Team', 'Focuses on machine learning models', '["Alice", "Clara"]', 'Bob Martin');
+CREATE TABLE IF NOT EXISTS "team_member" (
+    team_id INTEGER REFERENCES "team"(id) ON DELETE CASCADE,
+    user_id INTEGER REFERENCES "user"(id) ON DELETE CASCADE,
+    PRIMARY KEY (team_id, user_id)
+);
 
 
 -- =========================================================
--- 🔹 TABLE: cloc     k
+-- 🔹 TABLE: clock
 -- =========================================================
 CREATE TABLE IF NOT EXISTS clock (
     id SERIAL PRIMARY KEY,
