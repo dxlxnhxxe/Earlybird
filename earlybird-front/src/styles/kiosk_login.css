@@ -1,0 +1,168 @@
+.app {
+  display: flex;
+  width: 100vw;
+  height: 100vh;
+  min-height: 100vh;
+  min-width: 100vw;
+  border-radius: 0;
+  overflow: hidden;
+}
+.login-pin-back-button {
+  position: absolute;
+  top: 24px;
+  left: 24px;
+  z-index: 2;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #e0e0e0;
+  color: #23292f;
+  font-size: 1.3rem;
+  border: none;
+  outline: none;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s, box-shadow 0.15s, transform 0.08s;
+}
+.login-pin-back-button:hover {
+  background: #353b40;
+  box-shadow: 0 2px 8px rgba(0, 120, 212, 0.08);
+  transform: translateY(-2px) scale(1.04);
+}
+.login-pin-back-button:active {
+  background: #1a1f23;
+  box-shadow: 0 1px 4px rgba(0, 120, 212, 0.10);
+  transform: scale(0.97);
+}
+.login-pin-app {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: #fff;
+  text-align: center;
+  box-shadow: none;
+  border-radius: 0;
+  width: 100%;
+  min-height: 100%;
+  margin: 0 auto;
+  padding: 0 18px;
+}
+
+ .login-pin-greeting {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: 16px;
+  margin-bottom: 12px;
+}
+
+ .login-pin-avatar {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  margin-bottom: 14px;
+  background: #f0f0f0;
+}
+
+ .login-pin-greeting h1 {
+  font-size: 1.4rem;
+  font-weight: 600;
+  margin: 0 0 10px 0;
+}
+
+ .login-pin-pin-input-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+ .login-pin-pin-input-container p {
+  margin-bottom: 14px;
+  color: #444;
+  font-size: 1.05rem;
+}
+
+ .login-pin-pin-input {
+  display: flex;
+  gap: 14px;
+  margin-bottom: 10px;
+}
+
+ .login-pin-pin-dot {
+  width: 40px;
+  height: 40px;
+  border: 2.5px solid #e0e0e0;
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #fafbfc;
+}
+ .login-pin-pin-dot.filled .login-pin-dot-inner {
+  width: 14px;
+  height: 14px;
+  background: #222;
+  border-radius: 50%;
+}
+
+ .login-pin-keypad {
+  display: grid;
+  grid-template-columns: repeat(3, 56px);
+  grid-gap: 16px;
+  justify-content: center;
+  margin: 22px 0 12px 0;
+}
+ .login-pin-keypad-button {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: #23292f;
+  color: #fff;
+  font-size: 1.5rem;
+  border: none;
+  outline: none;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  cursor: pointer;
+  transition: background 0.15s, box-shadow 0.15s, transform 0.08s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.login-pin-keypad-button:hover {
+  background: #353b40;
+  box-shadow: 0 2px 8px rgba(0, 120, 212, 0.08);
+  transform: translateY(-2px) scale(1.04);
+}
+.login-pin-keypad-button:active {
+  background: #1a1f23;
+  box-shadow: 0 1px 4px rgba(0, 120, 212, 0.10);
+  transform: scale(0.97);
+}
+ .login-pin-delete-button {
+  background: #e0e0e0;
+  color: #23292f;
+}
+.login-pin-delete-button:hover {
+  background: #f0f0f0;
+}
+.login-pin-delete-button:active {
+  background: #d0d0d0;
+}
+
+ .login-pin-forgot {
+  margin-top: 16px;
+}
+ .login-pin-forgot a {
+  color: #1c799f;
+  text-decoration: none;
+  font-size: 1rem;
+  font-weight: 500;
+}
+ .login-pin-forgot a:hover {
+  text-decoration: underline;
+}
