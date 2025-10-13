@@ -39,12 +39,13 @@ const AnimatedPopup: React.FC<AnimatedPopupProps> = ({
       timeoutRef.current = setTimeout(() => {
         if (onClose) onClose();
       }, 500);
-      return;
+      return () => {
+        if (timeoutRef.current) clearTimeout(timeoutRef.current);
+      };
     }
     const timer = setTimeout(() => setSeconds(s => s - 1), 1000);
     return () => {
       clearTimeout(timer);
-      if (timeoutRef.current) clearTimeout(timeoutRef.current);
     };
   }, [seconds, open, onClose]);
 
