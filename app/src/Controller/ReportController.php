@@ -21,12 +21,30 @@ class ReportController extends AbstractController
 
         $totalUsers = count($users);
         $totalClocks = count($clocks);
-        $avgClocksPerUser = $totalUsers > 0 ? round($totalClocks / $totalUsers, 2) : 0;
+        if ($totalUsers > 0) {
+            $avgClocksPerUser = round($totalClocks / $totalUsers, 2);
+        } else {
+            $avgClocksPerUser = 0;
+        }
 
         $userClockCounts = [];
         foreach ($clocks as $clock) {
             $userId = $clock->getUser()->getId();
             $userClockCounts[$userId] = ($userClockCounts[$userId] ?? 0) + 1;
+            /*
+            Code a comprendre pour tt le monde
+            Admettons $clocks a 3 entrées
+            1.	For user 7 → not in array → (0) + 1 = 1
+		    2.  For user 7 again → (1) + 1 = 2
+		    3.  For user 2 → not in array → (0) + 1 = 1
+
+            donc
+
+            $userClockCounts = [
+                  7 => 2,
+                  2 => 1
+            ];
+            */
         }
 
         $mostActiveUser = null;
@@ -61,12 +79,18 @@ class ReportController extends AbstractController
     }
 
     // Route GET /reports/filter : rapport filtré + calcul du temps travaillé
+
+    // Route GET /reports/filter : rapport filtré + calcul du temps travaillé
     #[Route('/reports/filter', name: 'reports_global_filtered', methods: ['GET'])]
     public function getGlobalReportFiltered(Request $request, EntityManagerInterface $em): JsonResponse
     {
         $month = $request->query->get('month');
         $year = $request->query->get('year');
 
+        $userRepo = $em->getRepository(User::class);
+        $users = $userRepo->findAll();
+
+        // Filter clocks by month/year if provided
         $qb = $em->createQueryBuilder()
             ->select('c')
             ->from(Clock::class, 'c');
@@ -74,7 +98,6 @@ class ReportController extends AbstractController
         if ($month && $year) {
             $startDate = new \DateTimeImmutable("$year-$month-01 00:00:00");
             $endDate = $startDate->modify('+1 month');
-
             $qb->where('c.timestamp >= :start')
                 ->andWhere('c.timestamp < :end')
                 ->setParameter('start', $startDate)
@@ -82,15 +105,10 @@ class ReportController extends AbstractController
         }
 
         $clocks = $qb->getQuery()->getResult();
-        $users = $em->getRepository(User::class)->findAll();
 
-        // Si aucune activité pour le mois choisi
         if (empty($clocks)) {
             return new JsonResponse([
-                'filters' => [
-                    'month' => $month ?? 'all',
-                    'year' => $year ?? 'all'
-                ],
+                'filters' => ['month' => $month ?? 'all', 'year' => $year ?? 'all'],
                 'message' => 'Aucune activité pendant ce mois',
                 'summary' => [
                     'total_users' => count($users),
@@ -103,87 +121,48 @@ class ReportController extends AbstractController
             ], 200);
         }
 
-        // Statistiques
         $totalUsers = count($users);
         $totalClocks = count($clocks);
         $avgClocksPerUser = $totalUsers > 0 ? round($totalClocks / $totalUsers, 2) : 0;
 
-        // Regrouper les clocks par utilisateur
-        $userClocks = [];
-        foreach ($clocks as $clock) {
-            $userId = $clock->getUser()->getId();
-            $userClocks[$userId][] = [
-                'type' => $clock->getType(),
-                'timestamp' => $clock->getTimestamp()
-            ];
-        }
+        // Group clocks by user
+        $userClocks = $this->groupClocksByUser($clocks);
 
-        // Calcul du temps total travaillé par utilisateur
-        $userDurations = [];
         $globalTotalSeconds = 0;
+        $userDurations = [];
 
         foreach ($userClocks as $userId => $records) {
-            $arrivals = [];
-            $departures = [];
-
-            foreach ($records as $entry) {
-                if ($entry['type'] === 'arrival') {
-                    $arrivals[] = $entry['timestamp'];
-                } elseif ($entry['type'] === 'departure') {
-                    $departures[] = $entry['timestamp'];
-                }
-            }
-
-            $totalSeconds = 0;
-            $pairCount = min(count($arrivals), count($departures));
-
-            for ($i = 0; $i < $pairCount; $i++) {
-                $interval = $departures[$i]->getTimestamp() - $arrivals[$i]->getTimestamp();
-                if ($interval > 0) {
-                    $totalSeconds += $interval;
-                }
-            }
-
+            $totalSeconds = $this->calculateTotalSeconds($records);
             $globalTotalSeconds += $totalSeconds;
-            $hours = floor($totalSeconds / 3600);
-            $minutes = floor(($totalSeconds % 3600) / 60);
-
             $userDurations[$userId] = [
-                'total_work_time' => sprintf('%02dh %02dm', $hours, $minutes),
+                'total_work_time' => $this->formatDuration($totalSeconds),
                 'total_seconds' => $totalSeconds,
             ];
         }
 
-        // Dernière activité
-        $lastActivity = null;
-        if (!empty($clocks)) {
-            usort($clocks, fn($a, $b) => $b->getTimestamp() <=> $a->getTimestamp());
-            $lastActivity = $clocks[0]->getTimestamp()->format('Y-m-d H:i:s');
-        }
+        // Last activity
+        usort($clocks, fn($a, $b) => $b->getTimestamp() <=> $a->getTimestamp());
+        $lastActivity = $clocks[0]->getTimestamp()->format('Y-m-d H:i:s');
 
-        // Moyenne du temps travaillé globalement
-        $avgWorkTime = $totalUsers > 0 && $globalTotalSeconds > 0
-            ? sprintf('%02dh %02dm', floor(($globalTotalSeconds / $totalUsers) / 3600), floor((($globalTotalSeconds / $totalUsers) % 3600) / 60))
+        // Average global work time
+        $avgWorkTime = ($totalUsers > 0 && $globalTotalSeconds > 0)
+            ? $this->formatDuration($globalTotalSeconds / $totalUsers)
             : '00h 00m';
 
-        // Construire la réponse finale
-        $reportUsers = [];
-        foreach ($users as $user) {
+        // Build user report
+        $reportUsers = array_map(function ($user) use ($userDurations) {
             $uid = $user->getId();
-            $reportUsers[] = [
+            return [
                 'id' => $uid,
                 'firstname' => $user->getFirstname(),
                 'lastname' => $user->getLastname(),
                 'email' => $user->getEmail(),
                 'total_work_time' => $userDurations[$uid]['total_work_time'] ?? '00h 00m',
             ];
-        }
+        }, $users);
 
         return new JsonResponse([
-            'filters' => [
-                'month' => $month ?? 'all',
-                'year' => $year ?? 'all'
-            ],
+            'filters' => ['month' => $month ?? 'all', 'year' => $year ?? 'all'],
             'summary' => [
                 'total_users' => $totalUsers,
                 'total_clocks' => $totalClocks,
@@ -194,4 +173,94 @@ class ReportController extends AbstractController
             'users' => $reportUsers
         ], 200);
     }
+
+    #[Route('/reports/team/{id}', name: 'reports_team', methods: ['GET'])]
+    public function getTeamReport(int $id, EntityManagerInterface $em): JsonResponse
+    {
+        $teamRepo = $em->getRepository(Team::class);
+        $userRepo = $em->getRepository(User::class);
+        $clockRepo = $em->getRepository(Clock::class);
+
+        $teams = $teamRepo->findAll();
+        $users = $userRepo->findAll();
+        $clocks = $clockRepo->findAll();
+
+        // Group all clocks by user
+        $userClocks = $this->groupClocksByUser($clocks);
+
+        $teamClockCounts = [];
+
+        foreach ($teams as $team) {
+            // Filter users belonging to this team
+            $teamUsers = array_filter($users, fn($u) => $u->getTeam() === $team || $u->getTeams()?->contains($team));
+            $userCount = count($teamUsers);
+
+            if ($userCount === 0) {
+                $teamClockCounts[$team->getName()] = '00h 00m';
+                continue;
+            }
+
+            // Compute total work time for all team users
+            $totalSecondsForTeam = 0;
+            foreach ($teamUsers as $user) {
+                $records = $userClocks[$user->getId()] ?? [];
+                $totalSecondsForTeam += $this->calculateTotalSeconds($records);
+            }
+
+            // Average work time
+            $avgSeconds = $totalSecondsForTeam / $userCount;
+            $teamClockCounts[$team->getName()] = $this->formatDuration($avgSeconds);
+        }
+
+        return new JsonResponse($teamClockCounts, 200);
+    }
+
+    private function groupClocksByUser(array $clocks): array
+    {
+        $grouped = [];
+        foreach ($clocks as $clock) {
+            $userId = $clock->getUser()->getId();
+            $grouped[$userId][] = [
+                'type' => $clock->getType(),
+                'timestamp' => $clock->getTimestamp()
+            ];
+        }
+        return $grouped;
+    }
+
+     //Calculates total worked seconds from arrival/departure records.
+    private function calculateTotalSeconds(array $records): int
+    {
+        $arrivals = [];
+        $departures = [];
+
+        foreach ($records as $entry) {
+            if ($entry['type'] === 'arrival') {
+                $arrivals[] = $entry['timestamp'];
+            } elseif ($entry['type'] === 'departure') {
+                $departures[] = $entry['timestamp'];
+            }
+        }
+
+        $totalSeconds = 0;
+        $pairCount = min(count($arrivals), count($departures));
+
+        for ($i = 0; $i < $pairCount; $i++) {
+            $interval = $departures[$i]->getTimestamp() - $arrivals[$i]->getTimestamp();
+            if ($interval > 0) {
+                $totalSeconds += $interval;
+            }
+        }
+
+        return $totalSeconds;
+    }
+
+    //format heures et minutes
+    private function formatDuration(float $seconds): string
+    {
+        $hours = floor($seconds / 3600);
+        $minutes = floor(($seconds % 3600) / 60);
+        return sprintf('%02dh %02dm', $hours, $minutes);
+    }
 }
+
