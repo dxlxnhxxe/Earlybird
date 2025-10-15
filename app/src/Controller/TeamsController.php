@@ -4,6 +4,7 @@ namespace App\Controller;
 
 use App\Entity\Team;
 use App\Entity\User;
+use App\Entity\TeamMember;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -40,12 +41,24 @@ class TeamsController extends AbstractController
         $team->setDescription($data['description'] ?? null);
         $team->setManager($manager);
 
-        // ✅ Ajouter les membres (Many-to-Many)
+
+        // ✅ Ajouter les membres (TeamMember avec start_time/end_time)
         if (!empty($data['members']) && is_array($data['members'])) {
-            foreach ($data['members'] as $userId) {
-                $user = $em->getRepository(User::class)->find($userId);
+            foreach ($data['members'] as $memberData) {
+                if (!isset($memberData['user_id'])) continue;
+                $user = $em->getRepository(User::class)->find($memberData['user_id']);
                 if ($user) {
-                    $team->addMember($user);
+                    $teamMember = new TeamMember();
+                    $teamMember->setTeam($team);
+                    $teamMember->setUser($user);
+                    if (isset($memberData['start_time'])) {
+                        $teamMember->setStartTime(\DateTime::createFromFormat('H:i', $memberData['start_time']));
+                    }
+                    if (isset($memberData['end_time'])) {
+                        $teamMember->setEndTime(\DateTime::createFromFormat('H:i', $memberData['end_time']));
+                    }
+                    $team->addMembership($teamMember);
+                    $em->persist($teamMember);
                 }
             }
         }
@@ -54,13 +67,17 @@ class TeamsController extends AbstractController
         $em->flush();
 
         // ✅ Construire la réponse JSON
+
         $members = [];
-        foreach ($team->getMembers() as $member) {
+        foreach ($team->getMemberships() as $membership) {
+            $user = $membership->getUser();
             $members[] = [
-                'id' => $member->getId(),
-                'firstname' => $member->getFirstname(),
-                'lastname' => $member->getLastname(),
-                'email' => $member->getEmail()
+                'id' => $user->getId(),
+                'firstname' => $user->getFirstname(),
+                'lastname' => $user->getLastname(),
+                'email' => $user->getEmail(),
+                'start_time' => $membership->getStartTime() ? $membership->getStartTime()->format('H:i') : null,
+                'end_time' => $membership->getEndTime() ? $membership->getEndTime()->format('H:i') : null
             ];
         }
 
@@ -90,12 +107,15 @@ class TeamsController extends AbstractController
         $data = [];
         foreach ($teams as $team) {
             $members = [];
-            foreach ($team->getMembers() as $member) {
+            foreach ($team->getMemberships() as $membership) {
+                $user = $membership->getUser();
                 $members[] = [
-                    'id' => $member->getId(),
-                    'firstname' => $member->getFirstname(),
-                    'lastname' => $member->getLastname(),
-                    'email' => $member->getEmail()
+                    'id' => $user->getId(),
+                    'firstname' => $user->getFirstname(),
+                    'lastname' => $user->getLastname(),
+                    'email' => $user->getEmail(),
+                    'start_time' => $membership->getStartTime() ? $membership->getStartTime()->format('H:i') : null,
+                    'end_time' => $membership->getEndTime() ? $membership->getEndTime()->format('H:i') : null
                 ];
             }
 
@@ -151,13 +171,26 @@ class TeamsController extends AbstractController
         }
 
         if (isset($data['members']) && is_array($data['members'])) {
-            foreach ($team->getMembers() as $existingMember) {
-                $team->removeMember($existingMember);
+            // Remove all existing memberships
+            foreach ($team->getMemberships() as $existingMembership) {
+                $em->remove($existingMembership);
             }
-            foreach ($data['members'] as $userId) {
-                $user = $em->getRepository(User::class)->find($userId);
+            // Add new memberships
+            foreach ($data['members'] as $memberData) {
+                if (!isset($memberData['user_id'])) continue;
+                $user = $em->getRepository(User::class)->find($memberData['user_id']);
                 if ($user) {
-                    $team->addMember($user);
+                    $teamMember = new TeamMember();
+                    $teamMember->setTeam($team);
+                    $teamMember->setUser($user);
+                    if (isset($memberData['start_time'])) {
+                        $teamMember->setStartTime(\DateTime::createFromFormat('H:i', $memberData['start_time']));
+                    }
+                    if (isset($memberData['end_time'])) {
+                        $teamMember->setEndTime(\DateTime::createFromFormat('H:i', $memberData['end_time']));
+                    }
+                    $team->addMembership($teamMember);
+                    $em->persist($teamMember);
                 }
             }
         }

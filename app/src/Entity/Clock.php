@@ -5,6 +5,7 @@ namespace App\Entity;
 use App\Repository\ClockRepository;
 use Doctrine\ORM\Mapping as ORM;
 use App\Entity\User;
+use App\Entity\TeamMember;
 
 #[ORM\Entity(repositoryClass: ClockRepository::class)]
 #[ORM\Table(name: '`clock`')]
@@ -15,9 +16,10 @@ class Clock
     #[ORM\Column]
     private ?int $id = null;
 
-    #[ORM\ManyToOne(targetEntity: User::class)]
+
+    #[ORM\ManyToOne(targetEntity: TeamMember::class)]
     #[ORM\JoinColumn(nullable: false, onDelete: 'CASCADE')]
-    private ?User $user = null;
+    private ?TeamMember $teamMember = null;
 
     #[ORM\Column(type: 'datetime')]
     private ?\DateTimeInterface $timestamp = null;
@@ -27,8 +29,9 @@ class Clock
 
     public function getId(): ?int { return $this->id; }
 
-    public function getUser(): ?User { return $this->user; }
-    public function setUser(User $user): static { $this->user = $user; return $this; }
+
+    public function getTeamMember(): ?TeamMember { return $this->teamMember; }
+    public function setTeamMember(TeamMember $teamMember): static { $this->teamMember = $teamMember; return $this; }
 
     public function getTimestamp(): ?\DateTimeInterface { return $this->timestamp; }
     public function setTimestamp(\DateTimeInterface $timestamp): static { $this->timestamp = $timestamp; return $this; }
