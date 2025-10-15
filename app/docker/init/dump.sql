@@ -54,9 +54,12 @@ CREATE TABLE IF NOT EXISTS "team" (
 );
 
 CREATE TABLE IF NOT EXISTS "team_member" (
+    id SERIAL PRIMARY KEY,
     team_id INTEGER REFERENCES "team"(id) ON DELETE CASCADE,
     user_id INTEGER REFERENCES "user"(id) ON DELETE CASCADE,
-    PRIMARY KEY (team_id, user_id)
+    start_time TIME,
+    end_time TIME,
+    UNIQUE (team_id, user_id)
 );
 
 -- ✅ Données d’exemple pour la table team
@@ -66,16 +69,26 @@ INSERT INTO "team" (id, name, description, manager_id) VALUES
 (3, 'AI Team', 'Focuses on machine learning models', 2),
 (4, 'All Users', 'All users in the system', 3);
 
--- ✅ Données d’exemple pour la table team_member
--- Backend Team: Alice (1), Bob (2)
-INSERT INTO team_member (team_id, user_id) VALUES (1, 1), (1, 2);
--- DevOps Team: Clara (3), Bob (2)
-INSERT INTO team_member (team_id, user_id) VALUES (2, 3), (2, 2);
--- AI Team: Alice (1), Clara (3)
-INSERT INTO team_member (team_id, user_id) VALUES (3, 1), (3, 3);
--- All Users: Alice (1), Bob (2), Clara (3)
--- All Users: Alice (1), Bob (2), Clara (3), David (4), Emma (5), Fanny (6), Gabriel (7), Hugo (8), Isabelle (9)
-INSERT INTO team_member (team_id, user_id) VALUES (4, 1), (4, 2), (4, 3), (4, 4), (4, 5), (4, 6), (4, 7), (4, 8), (4, 9);
+INSERT INTO team_member (team_id, user_id, start_time, end_time) VALUES
+    (1, 1, '09:00', '17:00'),
+    (1, 2, '09:30', '18:00');
+INSERT INTO team_member (team_id, user_id, start_time, end_time) VALUES
+    (2, 3, '10:00', '19:00'),
+    (2, 2, '09:00', '17:00');
+INSERT INTO team_member (team_id, user_id, start_time, end_time) VALUES
+    (3, 1, '08:00', '16:00'),
+    (3, 3, '09:00', '17:00');
+INSERT INTO team_member (team_id, user_id, start_time, end_time) VALUES
+    (4, 1, '09:00', '17:00'),
+    (4, 2, '09:00', '17:00'),
+    (4, 3, '09:00', '17:00'),
+    (4, 4, '09:00', '17:00'),
+    (4, 5, '09:00', '17:00'),
+    (4, 6, '09:00', '17:00'),
+    (4, 7, '09:00', '17:00'),
+    (4, 8, '09:00', '17:00'),
+    (4, 9, '09:00', '17:00');
+
 
 
 -- =========================================================
@@ -85,6 +98,8 @@ CREATE TABLE IF NOT EXISTS clock (
     id SERIAL PRIMARY KEY,
     timestamp TIMESTAMP NOT NULL DEFAULT NOW(),
     type VARCHAR(50) NOT NULL,
-    user_id INTEGER REFERENCES "user"(id) ON DELETE CASCADE
+    team_member_id INTEGER NOT NULL REFERENCES team_member(id) ON DELETE CASCADE,
+    start_time TIME,
+    end_time TIME
 );
 -- ✅ Données d’exemple pour la table clock
