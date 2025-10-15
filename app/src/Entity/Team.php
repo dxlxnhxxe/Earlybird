@@ -7,6 +7,7 @@ use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
 use App\Entity\User;
+use App\Entity\TeamMember;
 
 #[ORM\Entity(repositoryClass: TeamRepository::class)]
 #[ORM\Table(name: '`team`')]
@@ -28,14 +29,14 @@ class Team
     #[ORM\JoinColumn(nullable: true, unique: true, onDelete: 'SET NULL')]
     private ?User $manager = null;
 
-    // ✅ Many-to-Many relation vers User (members)
-    #[ORM\ManyToMany(targetEntity: User::class, inversedBy: 'teams')]
-    #[ORM\JoinTable(name: 'team_member')]
-    private Collection $members;
+
+    // ✅ One-to-Many relation to TeamMember entity (memberships)
+    #[ORM\OneToMany(mappedBy: 'team', targetEntity: TeamMember::class, cascade: ['persist', 'remove'])]
+    private Collection $memberships;
 
     public function __construct()
     {
-        $this->members = new ArrayCollection();
+        $this->memberships = new ArrayCollection();
     }
 
     // 🔹 Getters & Setters
@@ -79,29 +80,30 @@ class Team
     }
 
     /**
-     * @return Collection<int, User>
+     * @return Collection<int, TeamMember>
      */
-    public function getMembers(): Collection
+    public function getMemberships(): Collection
     {
-        return $this->members;
+        return $this->memberships;
     }
 
-    public function addMember(User $user): static
+    public function addMembership(TeamMember $membership): static
     {
-        if (!$this->members->contains($user)) {
-            $this->members->add($user);
-            $user->addTeam($this);
+        if (!$this->memberships->contains($membership)) {
+            $this->memberships->add($membership);
+            $membership->setTeam($this);
         }
-
         return $this;
     }
 
-    public function removeMember(User $user): static
+    public function removeMembership(TeamMember $membership): static
     {
-        if ($this->members->removeElement($user)) {
-            $user->removeTeam($this);
+        if ($this->memberships->removeElement($membership)) {
+            // set the owning side to null (unless already changed)
+            if ($membership->getTeam() === $this) {
+                $membership->setTeam(null);
+            }
         }
-
         return $this;
     }
 }
