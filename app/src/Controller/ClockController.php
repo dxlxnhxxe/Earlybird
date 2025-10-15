@@ -4,6 +4,8 @@ namespace App\Controller;
 
 use App\Entity\Clock;
 use App\Entity\User;
+use App\Entity\Team;
+use App\Entity\TeamMember;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -18,23 +20,33 @@ class ClockController extends AbstractController
     {
         $data = json_decode($request->getContent(), true);
 
-        if (!$data || empty($data['user_id']) || empty($data['type'])) {
-            return new JsonResponse(['error' => 'Missing user_id or type'], 400);
+        if (!$data || empty($data['user_id']) || empty($data['team_id']) || empty($data['type'])) {
+            return new JsonResponse(['error' => 'Missing user_id, team_id or type'], 400);
         }
 
         if (!in_array($data['type'], ['arrival', 'departure'])) {
             return new JsonResponse(['error' => 'Type must be "arrival" or "departure"'], 400);
         }
 
-        // Vérifier que l'utilisateur existe
+        // Vérifier que l'utilisateur et la team existent
         $user = $em->getRepository(User::class)->find($data['user_id']);
-        if (!$user) {
-            return new JsonResponse(['error' => 'User not found'], 404);
+        $team = $em->getRepository(Team::class)->find($data['team_id']);
+        if (!$user || !$team) {
+            return new JsonResponse(['error' => 'User or Team not found'], 404);
+        }
+
+        // Trouver le TeamMember correspondant
+        $teamMember = $em->getRepository(TeamMember::class)->findOneBy([
+            'user' => $user,
+            'team' => $team
+        ]);
+        if (!$teamMember) {
+            return new JsonResponse(['error' => 'User is not a member of this team'], 404);
         }
 
         // Créer un enregistrement Clock
         $clock = new Clock();
-        $clock->setUser($user);
+        $clock->setTeamMember($teamMember);
         $clock->setType($data['type']);
         $clock->setTimestamp(new \DateTime());
 
@@ -46,41 +58,48 @@ class ClockController extends AbstractController
             'clock' => [
                 'id' => $clock->getId(),
                 'user' => $user->getFirstname() . ' ' . $user->getLastname(),
+                'team' => $team->getName(),
                 'type' => $clock->getType(),
                 'timestamp' => $clock->getTimestamp()->format('Y-m-d H:i:s')
             ]
         ], 201);
     }
 
-    // ✅ GET /users/{id}/clocks
-    #[Route('/users/{id}/clocks', name: 'user_clocks', methods: ['GET'])]
-    public function getUserClocks(int $id, EntityManagerInterface $em): JsonResponse
+    // ✅ GET /users/{user_id}/teams/{team_id}/clocks
+    #[Route('/users/{user_id}/teams/{team_id}/clocks', name: 'user_team_clocks', methods: ['GET'])]
+    public function getUserTeamClocks(int $user_id, int $team_id, EntityManagerInterface $em): JsonResponse
     {
-        // 1️⃣ Récupérer l’utilisateur
-        $user = $em->getRepository(User::class)->find($id);
-
-        if (!$user) {
-            return new JsonResponse(['error' => 'User not found'], 404);
+        $user = $em->getRepository(User::class)->find($user_id);
+        $team = $em->getRepository(Team::class)->find($team_id);
+        if (!$user || !$team) {
+            return new JsonResponse(['error' => 'User or Team not found'], 404);
         }
-
-        // 2️⃣ Récupérer les clocks associées
-        $clocks = $em->getRepository(Clock::class)->findBy(['user' => $user], ['timestamp' => 'DESC']);
-
-        // 3️⃣ Formater la réponse JSON
-        $data = array_map(function (Clock $clock) {
+        $teamMember = $em->getRepository(TeamMember::class)->findOneBy([
+            'user' => $user,
+            'team' => $team
+        ]);
+        if (!$teamMember) {
+            return new JsonResponse(['error' => 'User is not a member of this team'], 404);
+        }
+        $clocks = $em->getRepository(Clock::class)->findBy(['teamMember' => $teamMember], ['timestamp' => 'DESC']);
+        $data = array_map(function (Clock $clock) use ($team) {
             return [
                 'id' => $clock->getId(),
                 'timestamp' => $clock->getTimestamp()->format('Y-m-d H:i:s'),
                 'type' => $clock->getType(),
+                'team' => $team->getName(),
             ];
         }, $clocks);
-
         return new JsonResponse([
             'user' => [
                 'id' => $user->getId(),
                 'firstname' => $user->getFirstname(),
                 'lastname' => $user->getLastname(),
                 'email' => $user->getEmail(),
+            ],
+            'team' => [
+                'id' => $team->getId(),
+                'name' => $team->getName(),
             ],
             'clocks' => $data,
         ], 200);

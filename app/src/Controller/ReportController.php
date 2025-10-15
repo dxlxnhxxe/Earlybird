@@ -25,8 +25,11 @@ class ReportController extends AbstractController
 
         $userClockCounts = [];
         foreach ($clocks as $clock) {
-            $userId = $clock->getUser()->getId();
-            $userClockCounts[$userId] = ($userClockCounts[$userId] ?? 0) + 1;
+            $teamMember = $clock->getTeamMember();
+            if ($teamMember && $teamMember->getUser()) {
+                $userId = $teamMember->getUser()->getId();
+                $userClockCounts[$userId] = ($userClockCounts[$userId] ?? 0) + 1;
+            }
         }
 
         $mostActiveUser = null;
@@ -108,14 +111,18 @@ class ReportController extends AbstractController
         $totalClocks = count($clocks);
         $avgClocksPerUser = $totalUsers > 0 ? round($totalClocks / $totalUsers, 2) : 0;
 
-        // Regrouper les clocks par utilisateur
+
+        // Regrouper les clocks par utilisateur via TeamMember
         $userClocks = [];
         foreach ($clocks as $clock) {
-            $userId = $clock->getUser()->getId();
-            $userClocks[$userId][] = [
-                'type' => $clock->getType(),
-                'timestamp' => $clock->getTimestamp()
-            ];
+            $teamMember = $clock->getTeamMember();
+            if ($teamMember && $teamMember->getUser()) {
+                $userId = $teamMember->getUser()->getId();
+                $userClocks[$userId][] = [
+                    'type' => $clock->getType(),
+                    'timestamp' => $clock->getTimestamp()
+                ];
+            }
         }
 
         // Calcul du temps total travaillé par utilisateur
