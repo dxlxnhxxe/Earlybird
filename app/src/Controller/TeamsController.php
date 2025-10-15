@@ -138,6 +138,41 @@ class TeamsController extends AbstractController
         return new JsonResponse($data, 200);
     }
 
+    #[Route('/teams/{id}', name: 'team_detail', methods: ['GET'])]
+    public function getTeam(int $id, EntityManagerInterface $em): JsonResponse
+    {
+        $team = $em->getRepository(Team::class)->find($id);
+        if (!$team) {
+            return new JsonResponse(['error' => 'Team not found'], 404);
+        }
+        $members = [];
+        foreach ($team->getMemberships() as $membership) {
+            $user = $membership->getUser();
+            $members[] = [
+                'id' => $user->getId(),
+                'firstname' => $user->getFirstname(),
+                'lastname' => $user->getLastname(),
+                'email' => $user->getEmail(),
+                'start_time' => $membership->getStartTime() ? $membership->getStartTime()->format('H:i') : null,
+                'end_time' => $membership->getEndTime() ? $membership->getEndTime()->format('H:i') : null
+            ];
+        }
+        $manager = $team->getManager();
+        $data = [
+            'id' => $team->getId(),
+            'name' => $team->getName(),
+            'description' => $team->getDescription(),
+            'manager' => $manager ? [
+                'id' => $manager->getId(),
+                'firstname' => $manager->getFirstname(),
+                'lastname' => $manager->getLastname(),
+                'email' => $manager->getEmail()
+            ] : null,
+            'members' => $members
+        ];
+        return new JsonResponse($data, 200);
+    }
+
     // ✅ Route PUT /teams/{id} pour modifier une équipe
     #[Route('/teams/{id}', name: 'team_update', methods: ['PUT'])]
     public function updateTeam(int $id, Request $request, EntityManagerInterface $em): JsonResponse
