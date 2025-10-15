@@ -2,6 +2,7 @@
 
 namespace App\Controller;
 
+use OpenApi\Annotations as OA;
 use App\Entity\Clock;
 use App\Entity\User;
 use App\Entity\Team;
@@ -14,7 +15,27 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 
 class ClockController extends AbstractController
 {
-    // ✅ POST /clocks
+    /**
+     * Create a clock entry
+     *
+     * @OA\Post(
+     *     path="/clocks",
+     *     summary="Create a clock entry",
+     *     consumes={"application/json"},
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             required={"user_id", "team_id", "type"},
+     *             @OA\Property(property="user_id", type="integer", example=1),
+     *             @OA\Property(property="team_id", type="integer", example=2),
+     *             @OA\Property(property="type", type="string", enum={"arrival", "departure"}, example="arrival")
+     *         )
+     *     ),
+     *     @OA\Response(response=201, description="Clock recorded successfully"),
+     *     @OA\Response(response=400, description="Missing user_id, team_id or type"),
+     *     @OA\Response(response=404, description="User or Team not found")
+     * )
+     */
     #[Route('/clocks', name: 'clock_create', methods: ['POST'])]
     public function createClock(Request $request, EntityManagerInterface $em): JsonResponse
     {
@@ -65,10 +86,15 @@ class ClockController extends AbstractController
         ], 201);
     }
 
-    // ✅ GET /users/{user_id}/teams/{team_id}/clocks
-    #[Route('/users/{user_id}/teams/{team_id}/clocks', name: 'user_team_clocks', methods: ['GET'])]
-    public function getUserTeamClocks(int $user_id, int $team_id, EntityManagerInterface $em): JsonResponse
+    // ✅ GET /clocks?user_id=...&team_id=...
+    #[Route('/clocks', name: 'user_team_clocks', methods: ['GET'])]
+    public function getUserTeamClocks(Request $request, EntityManagerInterface $em): JsonResponse
     {
+        $user_id = $request->query->get('user_id');
+        $team_id = $request->query->get('team_id');
+        if (!$user_id || !$team_id) {
+            return new JsonResponse(['error' => 'Missing user_id or team_id query parameter'], 400);
+        }
         $user = $em->getRepository(User::class)->find($user_id);
         $team = $em->getRepository(Team::class)->find($team_id);
         if (!$user || !$team) {
@@ -103,5 +129,41 @@ class ClockController extends AbstractController
             ],
             'clocks' => $data,
         ], 200);
+    }
+
+    #[Route('/clocks/{id}', name: 'clock_delete', methods: ['DELETE'])]
+    public function deleteClock(int $id, EntityManagerInterface $em): JsonResponse
+    {
+        $clock = $em->getRepository(Clock::class)->find($id);
+        if (!$clock) {
+            return new JsonResponse(['error' => 'Clock not found'], 404);
+        }
+        $em->remove($clock);
+        $em->flush();
+        return new JsonResponse(['status' => 'Clock deleted successfully'], 200);
+    }
+
+    #[Route('/clocks/{id}', name: 'clock_update', methods: ['PUT'])]
+    public function updateClock(int $id, Request $request, EntityManagerInterface $em): JsonResponse
+    {
+        $clock = $em->getRepository(Clock::class)->find($id);
+        if (!$clock) {
+            return new JsonResponse(['error' => 'Clock not found'], 404);
+        }
+        $data = json_decode($request->getContent(), true);
+        if (!$data) {
+            return new JsonResponse(['error' => 'Invalid or missing JSON body'], 400);
+        }
+        if (isset($data['type']) && in_array($data['type'], ['arrival', 'departure'])) {
+            $clock->setType($data['type']);
+        }
+        if (isset($data['timestamp'])) {
+            $dt = \DateTime::createFromFormat('Y-m-d H:i:s', $data['timestamp']);
+            if ($dt) {
+                $clock->setTimestamp($dt);
+            }
+        }
+        $em->flush();
+        return new JsonResponse(['status' => 'Clock updated successfully'], 200);
     }
 }

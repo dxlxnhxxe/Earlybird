@@ -15,7 +15,7 @@ const users = [
     { id: 'olivia-johnson', name: 'Olivia Johnson', status: 'unavailable' }
 ]
 
-const HomePage: React.FC = () => {
+const KioskHomePage: React.FC = () => {
     const navigate = useNavigate()
     const [showPopup, setShowPopup] = useState(false)
     const [popupType, setPopupType] = useState<'in' | 'out' | null>(null)
@@ -168,4 +168,4 @@ const HomePage: React.FC = () => {
 }
 
 export { users }
-export default HomePage
+export default KioskHomePage
