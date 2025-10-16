@@ -2,6 +2,7 @@
 
 namespace App\Controller;
 
+use OpenApi\Annotations as OA;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
@@ -26,10 +27,32 @@ class HomeController extends AbstractController
         return new Response('Hello, World!');
     }
 
-    // Ajoutez cette méthode pour gérer la création d'un utilisateur
+    /**
+     * Create a user
+     *
+     * @OA\Post(
+     *     path="/users",
+     *     summary="Create a user",
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             required={"email", "password"},
+     *             @OA\Property(property="firstname", type="string"),
+     *             @OA\Property(property="lastname", type="string"),
+     *             @OA\Property(property="email", type="string"),
+     *             @OA\Property(property="phone_number", type="string"),
+     *             @OA\Property(property="password", type="string"),
+     *             @OA\Property(property="role", type="string"),
+     *             @OA\Property(property="code_pin", type="integer")
+     *         )
+     *     ),
+     *     @OA\Response(response=201, description="User created successfully"),
+     *     @OA\Response(response=400, description="Email and password are required")
+     * )
+     */
     #[Route('/users', name: 'user_create', methods: ['POST'])]
-public function createUser(Request $request, EntityManagerInterface $em): JsonResponse
-{
+    public function createUser(Request $request, EntityManagerInterface $em): JsonResponse
+    {
     // Décoder le JSON reçu
     $data = json_decode($request->getContent(), true);
 
@@ -59,6 +82,17 @@ public function createUser(Request $request, EntityManagerInterface $em): JsonRe
     return new JsonResponse(['status' => 'User created successfully'], 201);
 }
 
+    /**
+     * Delete a user
+     *
+     * @OA\Delete(
+     *     path="/users/{id}",
+     *     summary="Delete a user",
+     *     @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer")),
+     *     @OA\Response(response=200, description="User deleted successfully"),
+     *     @OA\Response(response=404, description="User to delete not found")
+     * )
+     */
     #[Route('/users/{id}', name: 'user_delete', methods: ['DELETE'])]
     public function deleteUser(int $id, Request $request, EntityManagerInterface $em): JsonResponse
     {
@@ -71,6 +105,15 @@ public function createUser(Request $request, EntityManagerInterface $em): JsonRe
         return new JsonResponse(['status' => 'User deleted successfully'], 200);
     }
 
+    /**
+     * List all users
+     *
+     * @OA\Get(
+     *     path="/users",
+     *     summary="List all users",
+     *     @OA\Response(response=200, description="List of users")
+     * )
+     */
     #[Route('/users', name: 'user_display', methods: ['GET'])]
     public function displayUser(EntityManagerInterface $em): JsonResponse
     {
@@ -89,6 +132,59 @@ public function createUser(Request $request, EntityManagerInterface $em): JsonRe
         return new JsonResponse($data, 200);
     }
 
+    /**
+     * Show a specific user
+     *
+     * @OA\Get(
+     *     path="/users/{id}",
+     *     summary="Show a specific user",
+     *     @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer")),
+     *     @OA\Response(response=200, description="User details"),
+     *     @OA\Response(response=404, description="User not found")
+     * )
+     */
+    #[Route('/users/{id}', name: 'user_show', methods: ['GET'])]
+    public function showUser(int $id, EntityManagerInterface $em): JsonResponse
+    {
+        $user = $em->getRepository(User::class)->find($id);
+        if (!$user) {
+            return new JsonResponse(['error' => 'User not found'], 404);
+        }
+        $data = [
+            'id' => $user->getId(),
+            'firstname' => $user->getFirstname(),
+            'lastname' => $user->getLastname(),
+            'email' => $user->getEmail(),
+            'phone_number' => $user->getPhoneNumber(),
+            'role' => $user->getRole(),
+            'code_pin' => $user->getCodePin(),
+        ];
+        return new JsonResponse($data, 200);
+    }
+
+    /**
+     * Update a user
+     *
+     * @OA\Put(
+     *     path="/users/{id}",
+     *     summary="Update a user",
+     *     @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer")),
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             @OA\Property(property="firstname", type="string"),
+     *             @OA\Property(property="lastname", type="string"),
+     *             @OA\Property(property="email", type="string"),
+     *             @OA\Property(property="phone_number", type="string"),
+     *             @OA\Property(property="role", type="string"),
+     *             @OA\Property(property="code_pin", type="integer"),
+     *             @OA\Property(property="password", type="string")
+     *         )
+     *     ),
+     *     @OA\Response(response=200, description="User updated successfully"),
+     *     @OA\Response(response=404, description="User to update not found")
+     * )
+     */
     #[Route('/users/{id}', name: 'user_update', methods: ['PUT'])]
     public function updateUser(int $id, Request $request, EntityManagerInterface $em): JsonResponse
     {

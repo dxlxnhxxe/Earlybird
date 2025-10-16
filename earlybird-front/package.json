@@ -7,6 +7,10 @@
         "url": "https://github.com/chrisuser"
     },
     "dependencies": {
+        "@fullcalendar/core": "^6.1.19",
+        "@fullcalendar/daygrid": "^6.1.19",
+        "@fullcalendar/react": "^6.1.19",
+        "@fullcalendar/resource-timeline": "^6.1.19",
         "@reduxjs/toolkit": "^2.5.0",
         "@testing-library/jest-dom": "^6.6.3",
         "@testing-library/react": "^16.1.0",
