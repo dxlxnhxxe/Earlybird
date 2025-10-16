@@ -4,6 +4,7 @@ namespace App\Controller;
 
 use App\Entity\User;
 use App\Entity\Clock;
+use App\Entity\Team;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -12,7 +13,6 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 
 class ReportController extends AbstractController
 {
-    // Route GET /reports : rapport global simple
     #[Route('/reports', name: 'reports_global', methods: ['GET'])]
     public function getGlobalReport(EntityManagerInterface $em): JsonResponse
     {
@@ -21,48 +21,11 @@ class ReportController extends AbstractController
 
         $totalUsers = count($users);
         $totalClocks = count($clocks);
-        if ($totalUsers > 0) {
-            $avgClocksPerUser = round($totalClocks / $totalUsers, 2);
-        } else {
-            $avgClocksPerUser = 0;
-        }
+        $avgClocksPerUser = $this->calculateAverage($totalClocks, $totalUsers);
 
-        $userClockCounts = [];
-        foreach ($clocks as $clock) {
-            $teamMember = $clock->getTeamMember();
-            if ($teamMember && $teamMember->getUser()) {
-                $userId = $teamMember->getUser()->getId();
-                $userClockCounts[$userId] = ($userClockCounts[$userId] ?? 0) + 1;
-            }
-            /*
-            Code a comprendre pour tt le monde
-            Admettons $clocks a 3 entrées
-            1.	For user 7 → not in array → (0) + 1 = 1
-		    2.  For user 7 again → (1) + 1 = 2
-		    3.  For user 2 → not in array → (0) + 1 = 1
-
-            donc
-
-            $userClockCounts = [
-                  7 => 2,
-                  2 => 1
-            ];
-            */
-        }
-
-        $mostActiveUser = null;
-        $maxClocks = 0;
-        if (!empty($userClockCounts)) {
-            $maxClocks = max($userClockCounts);
-            $mostActiveUserId = array_search($maxClocks, $userClockCounts);
-            $mostActiveUser = $em->getRepository(User::class)->find($mostActiveUserId);
-        }
-
-        $lastActivity = null;
-        if (!empty($clocks)) {
-            usort($clocks, fn($a, $b) => $b->getTimestamp() <=> $a->getTimestamp());
-            $lastActivity = $clocks[0]->getTimestamp()->format('Y-m-d H:i:s');
-        }
+        $userClockCounts = $this->countClocksPerUser($clocks);
+        [$mostActiveUser, $maxClocks] = $this->findMostActiveUser($em, $userClockCounts);
+        $lastActivity = $this->getLastActivityTimestamp($clocks);
 
         return new JsonResponse([
             'kpis' => [
@@ -78,137 +41,34 @@ class ReportController extends AbstractController
                 ] : null,
                 'last_activity' => $lastActivity,
             ]
-        ], 200);
+        ]);
     }
 
-
-    // Route GET /reports/filter : rapport filtré + calcul du temps travaillé
     #[Route('/reports/filter', name: 'reports_global_filtered', methods: ['GET'])]
     public function getGlobalReportFiltered(Request $request, EntityManagerInterface $em): JsonResponse
     {
         $month = $request->query->get('month');
         $year = $request->query->get('year');
 
-        $qb = $em->createQueryBuilder()
-            ->select('c')
-            ->from(Clock::class, 'c');
+        [$clocks, $users] = $this->getFilteredData($em, $month, $year);
 
-        if ($month && $year) {
-            $startDate = new \DateTimeImmutable("$year-$month-01 00:00:00");
-            $endDate = $startDate->modify('+1 month');
-            $qb->where('c.timestamp >= :start')
-                ->andWhere('c.timestamp < :end')
-                ->setParameter('start', $startDate)
-                ->setParameter('end', $endDate);
-        }
-
-        $clocks = $qb->getQuery()->getResult();
-        $users = $em->getRepository(User::class)->findAll();
-
-        // Si aucune activité pour le mois choisi
         if (empty($clocks)) {
-            return new JsonResponse([
-                'filters' => [
-                    'month' => $month ?? 'all',
-                    'year' => $year ?? 'all'
-                ],
-                'message' => 'Aucune activité pendant ce mois',
-                'summary' => [
-                    'total_users' => count($users),
-                    'total_clocks' => 0,
-                    'average_clocks_per_user' => 0,
-                    'average_work_time' => '00h 00m',
-                    'last_activity' => null,
-                ],
-                'users' => []
-            ], 200);
+            return $this->emptyFilteredResponse($users, $month, $year);
         }
 
-        // Statistiques
         $totalUsers = count($users);
         $totalClocks = count($clocks);
-        $avgClocksPerUser = $totalUsers > 0 ? round($totalClocks / $totalUsers, 2) : 0;
+        $avgClocksPerUser = $this->calculateAverage($totalClocks, $totalUsers);
 
+        $userClocks = $this->groupClocksByUser($clocks);
+        [$userDurations, $globalSeconds] = $this->calculateUserDurations($userClocks);
 
-        // Regrouper les clocks par utilisateur via TeamMember
-        $userClocks = [];
-        foreach ($clocks as $clock) {
-            $teamMember = $clock->getTeamMember();
-            if ($teamMember && $teamMember->getUser()) {
-                $userId = $teamMember->getUser()->getId();
-                $userClocks[$userId][] = [
-                    'type' => $clock->getType(),
-                    'timestamp' => $clock->getTimestamp()
-                ];
-            }
-        }
-
-        // Calcul du temps total travaillé par utilisateur
-        $userDurations = [];
-        $globalTotalSeconds = 0;
-
-        foreach ($userClocks as $userId => $records) {
-            $arrivals = [];
-            $departures = [];
-
-            foreach ($records as $entry) {
-                if ($entry['type'] === 'arrival') {
-                    $arrivals[] = $entry['timestamp'];
-                } elseif ($entry['type'] === 'departure') {
-                    $departures[] = $entry['timestamp'];
-                }
-            }
-
-            $totalSeconds = 0;
-            $pairCount = min(count($arrivals), count($departures));
-
-            for ($i = 0; $i < $pairCount; $i++) {
-                $interval = $departures[$i]->getTimestamp() - $arrivals[$i]->getTimestamp();
-                if ($interval > 0) {
-                    $totalSeconds += $interval;
-                }
-            }
-
-            $globalTotalSeconds += $totalSeconds;
-            $hours = floor($totalSeconds / 3600);
-            $minutes = floor(($totalSeconds % 3600) / 60);
-
-            $userDurations[$userId] = [
-                'total_work_time' => sprintf('%02dh %02dm', $hours, $minutes),
-                'total_seconds' => $totalSeconds,
-            ];
-        }
-
-        // Dernière activité
-        $lastActivity = null;
-        if (!empty($clocks)) {
-            usort($clocks, fn($a, $b) => $b->getTimestamp() <=> $a->getTimestamp());
-            $lastActivity = $clocks[0]->getTimestamp()->format('Y-m-d H:i:s');
-        }
-
-        // Moyenne du temps travaillé globalement
-        $avgWorkTime = $totalUsers > 0 && $globalTotalSeconds > 0
-            ? sprintf('%02dh %02dm', floor(($globalTotalSeconds / $totalUsers) / 3600), floor((($globalTotalSeconds / $totalUsers) % 3600) / 60))
-            : '00h 00m';
-
-        // Construire la réponse finale
-        $reportUsers = [];
-        foreach ($users as $user) {
-            $uid = $user->getId();
-            $reportUsers[] = [
-                'id' => $uid,
-                'firstname' => $user->getFirstname(),
-                'lastname' => $user->getLastname(),
-                'email' => $user->getEmail(),
-                'total_work_time' => $userDurations[$uid]['total_work_time'] ?? '00h 00m',
-            ];
-        }
+        $avgWorkTime = $this->formatAverageWorkTime($globalSeconds, $totalUsers);
+        $lastActivity = $this->getLastActivityTimestamp($clocks);
+        $reportUsers = $this->buildUserReport($users, $userDurations);
 
         return new JsonResponse([
-            'filters' => [
-                'month' => $month ?? 'all',
-                'year' => $year ?? 'all'
-            ],
+            'filters' => ['month' => $month ?? 'all', 'year' => $year ?? 'all'],
             'summary' => [
                 'total_users' => $totalUsers,
                 'total_clocks' => $totalClocks,
@@ -216,7 +76,262 @@ class ReportController extends AbstractController
                 'average_work_time' => $avgWorkTime,
                 'last_activity' => $lastActivity,
             ],
-            'users' => $reportUsers
-        ], 200);
+            'users' => $reportUsers,
+        ]);
+    }
+
+    #[Route('/reports/team-averages', name: 'reports_team_averages', methods: ['GET'])]
+    public function getTeamsAverageWorkTime(EntityManagerInterface $em): JsonResponse
+    {
+        $now = new \DateTimeImmutable('now');
+        $since = $now->modify('-365 days');
+
+        $clocks = $this->fetchClocksSince($em, $since);
+        [$memberClocks, $memberTeam] = $this->mapClocksToMembers($clocks);
+        $memberSeconds = $this->computeMemberWorkSeconds($memberClocks);
+
+        $teamData = $this->buildTeamData($em, $memberSeconds, $memberTeam);
+        $this->finalizeTeamAverages($teamData);
+
+        usort($teamData, fn($a, $b) => strcmp($a['name'] ?? '', $b['name'] ?? ''));
+
+        return new JsonResponse([
+            'since' => $since->format('Y-m-d'),
+            'until' => $now->format('Y-m-d'),
+            'teams' => array_values($teamData),
+        ]);
+    }
+
+    /* ------------------------- PRIVATE HELPERS ------------------------- */
+
+    private function calculateAverage(int $total, int $count): float
+    {
+        return $count > 0 ? round($total / $count, 2) : 0;
+    }
+
+    private function countClocksPerUser(array $clocks): array
+    {
+        $counts = [];
+        foreach ($clocks as $clock) {
+            $tm = $clock->getTeamMember();
+            if ($tm && $tm->getUser()) {
+                $userId = $tm->getUser()->getId();
+                $counts[$userId] = ($counts[$userId] ?? 0) + 1;
+            }
+        }
+        return $counts;
+    }
+
+    private function findMostActiveUser(EntityManagerInterface $em, array $counts): array
+    {
+        if (empty($counts)) {
+            return [null, 0];
+        }
+        $max = max($counts);
+        $userId = array_search($max, $counts);
+        return [$em->getRepository(User::class)->find($userId), $max];
+    }
+
+    private function getLastActivityTimestamp(array $clocks): ?string
+    {
+        if (empty($clocks)) return null;
+        usort($clocks, fn($a, $b) => $b->getTimestamp() <=> $a->getTimestamp());
+        return $clocks[0]->getTimestamp()->format('Y-m-d H:i:s');
+    }
+
+    private function getFilteredData(EntityManagerInterface $em, ?string $month, ?string $year): array
+    {
+        $qb = $em->createQueryBuilder()->select('c')->from(Clock::class, 'c');
+        if ($month && $year) {
+            $start = new \DateTimeImmutable("$year-$month-01 00:00:00");
+            $end = $start->modify('+1 month');
+            $qb->where('c.timestamp >= :start')->andWhere('c.timestamp < :end')
+                ->setParameter('start', $start)
+                ->setParameter('end', $end);
+        }
+        return [$qb->getQuery()->getResult(), $em->getRepository(User::class)->findAll()];
+    }
+
+    private function emptyFilteredResponse(array $users, ?string $month, ?string $year): JsonResponse
+    {
+        return new JsonResponse([
+            'filters' => ['month' => $month ?? 'all', 'year' => $year ?? 'all'],
+            'message' => 'Aucune activité pendant ce mois',
+            'summary' => [
+                'total_users' => count($users),
+                'total_clocks' => 0,
+                'average_clocks_per_user' => 0,
+                'average_work_time' => '00h 00m',
+                'last_activity' => null,
+            ],
+            'users' => []
+        ]);
+    }
+
+    private function groupClocksByUser(array $clocks): array
+    {
+        $grouped = [];
+        foreach ($clocks as $clock) {
+            $tm = $clock->getTeamMember();
+            if ($tm && $tm->getUser()) {
+                $id = $tm->getUser()->getId();
+                $grouped[$id][] = [
+                    'type' => $clock->getType(),
+                    'timestamp' => $clock->getTimestamp(),
+                ];
+            }
+        }
+        return $grouped;
+    }
+
+    private function calculateUserDurations(array $userClocks): array
+    {
+        $durations = [];
+        $global = 0;
+
+        foreach ($userClocks as $uid => $records) {
+            $arrivals = array_filter($records, fn($r) => $r['type'] === 'arrival');
+            $departures = array_filter($records, fn($r) => $r['type'] === 'departure');
+            $pairs = min(count($arrivals), count($departures));
+            $total = 0;
+
+            for ($i = 0; $i < $pairs; $i++) {
+                $interval = $departures[$i]['timestamp']->getTimestamp() - $arrivals[$i]['timestamp']->getTimestamp();
+                if ($interval > 0) $total += $interval;
+            }
+
+            $global += $total;
+            $durations[$uid] = [
+                'total_work_time' => $this->formatSeconds($total),
+                'total_seconds' => $total,
+            ];
+        }
+
+        return [$durations, $global];
+    }
+
+    private function formatSeconds(int $seconds): string
+    {
+        $h = floor($seconds / 3600);
+        $m = floor(($seconds % 3600) / 60);
+        return sprintf('%02dh %02dm', $h, $m);
+    }
+
+    private function formatAverageWorkTime(int $globalSeconds, int $userCount): string
+    {
+        if ($userCount === 0 || $globalSeconds === 0) return '00h 00m';
+        $avg = $globalSeconds / $userCount;
+        return $this->formatSeconds((int)$avg);
+    }
+
+    private function buildUserReport(array $users, array $userDurations): array
+    {
+        $report = [];
+        foreach ($users as $u) {
+            $uid = $u->getId();
+            $report[] = [
+                'id' => $uid,
+                'firstname' => $u->getFirstname(),
+                'lastname' => $u->getLastname(),
+                'email' => $u->getEmail(),
+                'total_work_time' => $userDurations[$uid]['total_work_time'] ?? '00h 00m',
+            ];
+        }
+        return $report;
+    }
+
+    /* ---------- TEAM AVERAGE HELPERS ---------- */
+
+    private function fetchClocksSince(EntityManagerInterface $em, \DateTimeImmutable $since): array
+    {
+        return $em->createQueryBuilder()
+            ->select('c')->from(Clock::class, 'c')
+            ->where('c.timestamp >= :since')
+            ->setParameter('since', $since)
+            ->orderBy('c.timestamp', 'ASC')
+            ->getQuery()->getResult();
+    }
+
+    private function mapClocksToMembers(array $clocks): array
+    {
+        $memberClocks = [];
+        $memberTeam = [];
+
+        foreach ($clocks as $clock) {
+            $tm = $clock->getTeamMember();
+            if (!$tm || !$tm->getTeam()) continue;
+
+            $tmId = $tm->getId();
+            $memberTeam[$tmId] = $tm->getTeam()->getId();
+            $memberClocks[$tmId][] = [
+                'type' => $clock->getType(),
+                'timestamp' => $clock->getTimestamp(),
+            ];
+        }
+
+        return [$memberClocks, $memberTeam];
+    }
+
+    private function computeMemberWorkSeconds(array $memberClocks): array
+    {
+        $result = [];
+        foreach ($memberClocks as $id => $records) {
+            usort($records, fn($a, $b) => $a['timestamp'] <=> $b['timestamp']);
+            $total = 0;
+            $open = null;
+
+            foreach ($records as $r) {
+                if ($r['type'] === 'arrival' && !$open) {
+                    $open = $r['timestamp'];
+                } elseif ($r['type'] === 'departure' && $open) {
+                    $delta = $r['timestamp']->getTimestamp() - $open->getTimestamp();
+                    if ($delta > 0) $total += $delta;
+                    $open = null;
+                }
+            }
+            $result[$id] = $total;
+        }
+        return $result;
+    }
+
+    private function buildTeamData(EntityManagerInterface $em, array $memberSeconds, array $memberTeam): array
+    {
+        $teams = $em->getRepository(Team::class)->findAll();
+        $data = [];
+
+        foreach ($teams as $team) {
+            $data[$team->getId()] = [
+                'id' => $team->getId(),
+                'name' => $team->getName(),
+                'average_work_time_seconds' => 0,
+                'average_work_time' => '00h 00m',
+                'members_count' => 0,
+            ];
+        }
+
+        foreach ($memberSeconds as $tmId => $seconds) {
+            $tid = $memberTeam[$tmId] ?? null;
+            if ($tid === null || !isset($data[$tid])) continue;
+
+            $avgPerDay = $seconds / 365;
+            $data[$tid]['_sum'] = ($data[$tid]['_sum'] ?? 0) + $avgPerDay;
+            $data[$tid]['_count'] = ($data[$tid]['_count'] ?? 0) + 1;
+        }
+
+        return $data;
+    }
+
+    private function finalizeTeamAverages(array &$teams): void
+    {
+        foreach ($teams as &$t) {
+            $count = $t['_count'] ?? 0;
+            $avgSec = $count > 0 ? (int) round($t['_sum'] / $count) : 0;
+
+            $t['members_count'] = $count;
+            $t['average_work_time_seconds'] = $avgSec;
+            $t['average_work_time'] = $this->formatSeconds($avgSec);
+
+            unset($t['_sum'], $t['_count']);
+        }
     }
 }
