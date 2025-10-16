@@ -13,6 +13,127 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 
 class ReportController extends AbstractController
 {
+    #[Route('/reports/employee/{id}/daily-work-time', name: 'reports_employee_daily', methods: ['GET'])]
+    public function getEmployeeDailyWorkTime(int $id, Request $request, EntityManagerInterface $em): JsonResponse
+    {
+        $dateStr = $request->query->get('date');
+        if (!$dateStr) {
+            return new JsonResponse(['error' => 'Le paramètre "date" (YYYY-MM-DD) est requis.'], 400);
+        }
+
+        try {
+            $targetDate = new \DateTimeImmutable($dateStr);
+            $nextDay = $targetDate->modify('+1 day');
+        } catch (\Exception $e) {
+            return new JsonResponse(['error' => 'Format de date invalide. Utilisez YYYY-MM-DD.'], 400);
+        }
+
+        $user = $em->getRepository(User::class)->find($id);
+        if (!$user) {
+            return new JsonResponse(['error' => 'Utilisateur non trouvé.'], 404);
+        }
+
+        $clocks = $em->createQueryBuilder()
+            ->select('c')
+            ->from(Clock::class, 'c')
+            ->join('c.teamMember', 'tm')
+            ->join('tm.user', 'u')
+            ->where('u.id = :userId')
+            ->andWhere('c.timestamp >= :start')
+            ->andWhere('c.timestamp < :end')
+            ->orderBy('c.timestamp', 'ASC')
+            ->setParameter('userId', $id)
+            ->setParameter('start', $targetDate)
+            ->setParameter('end', $nextDay)
+            ->getQuery()
+            ->getResult();
+
+        if (empty($clocks)) {
+            return new JsonResponse([
+                'user_id' => $id,
+                'date' => $dateStr,
+                'daily_work_time' => '00h 00m',
+                'message' => 'Aucun pointage trouvé pour cette journée.'
+            ]);
+        }
+
+        $dailyRecords = array_map(fn($clock) => [
+            'type' => $clock->getType(),
+            'timestamp' => $clock->getTimestamp()
+        ], $clocks);
+
+        $totalSeconds = $this->calculateTotalSeconds($dailyRecords);
+        $formattedTime = $this->formatDuration($totalSeconds);
+
+        return new JsonResponse([
+            'user_id' => $id,
+            'date' => $dateStr,
+            'daily_work_time' => $formattedTime
+        ]);
+    }
+
+    #[Route('/reports/salarie/{id}/average-work-time', name: 'reports_employee_avg', methods: ['GET'])]
+    public function getEmployeeAverageWorkTime(int $id, Request $request, EntityManagerInterface $em): JsonResponse
+    {
+        $month = $request->query->get('month');
+        $year = $request->query->get('year');
+
+        $user = $em->getRepository(User::class)->find($id);
+        if (!$user) {
+            return new JsonResponse(['error' => 'Utilisateur non trouvé.'], 404);
+        }
+
+        $qb = $em->createQueryBuilder()
+            ->select('c')
+            ->from(Clock::class, 'c')
+            ->join('c.teamMember', 'tm')
+            ->join('tm.user', 'u')
+            ->where('u.id = :userId')
+            ->setParameter('userId', $id)
+            ->orderBy('c.timestamp', 'ASC');
+
+        if ($month && $year) {
+            try {
+                $start = new \DateTimeImmutable("$year-$month-01 00:00:00");
+                $end = $start->modify('+1 month');
+                $qb->andWhere('c.timestamp >= :start')->andWhere('c.timestamp < :end')
+                    ->setParameter('start', $start)
+                    ->setParameter('end', $end);
+            } catch (\Exception $e) {
+                return new JsonResponse(['error' => 'Filtres de date invalides.'], 400);
+            }
+        }
+
+        $clocks = $qb->getQuery()->getResult();
+        $dailyRecords = [];
+        foreach ($clocks as $clock) {
+            $key = $clock->getTimestamp()->format('Y-m-d');
+            $dailyRecords[$key][] = [
+                'type' => $clock->getType(),
+                'timestamp' => $clock->getTimestamp()
+            ];
+        }
+
+        $daysWorked = count($dailyRecords);
+        $totalSeconds = 0;
+        foreach ($dailyRecords as $recordsForDay) {
+            $totalSeconds += $this->calculateTotalSeconds($recordsForDay);
+        }
+
+        $avgSeconds = $daysWorked > 0 ? $totalSeconds / $daysWorked : 0;
+
+        return new JsonResponse([
+            'user_id' => $id,
+            'user_name' => $user->getFirstname() . ' ' . $user->getLastname(),
+            'filters' => ['month' => $month ?? 'all', 'year' => $year ?? 'all'],
+            'summary' => [
+                'total_work_time_period' => $this->formatDuration($totalSeconds),
+                'total_days_worked' => $daysWorked,
+                'average_work_time_per_day' => $this->formatDuration($avgSeconds),
+            ]
+        ]);
+    }
+
     #[Route('/reports', name: 'reports_global', methods: ['GET'])]
     public function getGlobalReport(EntityManagerInterface $em): JsonResponse
     {
@@ -43,6 +164,7 @@ class ReportController extends AbstractController
             ]
         ]);
     }
+
 
     #[Route('/reports/filter', name: 'reports_global_filtered', methods: ['GET'])]
     public function getGlobalReportFiltered(Request $request, EntityManagerInterface $em): JsonResponse
@@ -333,5 +455,46 @@ class ReportController extends AbstractController
 
             unset($t['_sum'], $t['_count']);
         }
+    }
+
+    private function calculateTotalSeconds(array $records): int
+    {
+        usort($records, fn($a, $b) => $a['timestamp'] <=> $b['timestamp']);
+
+        $inTypes = ['arrival', 'end_work', 'end_break'];
+        $outTypes = ['departure', 'start_work', 'start_break'];
+
+        $ins = [];
+        $outs = [];
+
+        foreach ($records as $r) {
+            $type = $r['type'] ?? '';
+            $ts = $r['timestamp'] ?? null;
+            if (!($ts instanceof \DateTimeInterface)) continue;
+
+            if (in_array($type, $inTypes, true)) $ins[] = $ts;
+            elseif (in_array($type, $outTypes, true)) $outs[] = $ts;
+        }
+
+        usort($ins, fn($a, $b) => $a->getTimestamp() <=> $b->getTimestamp());
+        usort($outs, fn($a, $b) => $a->getTimestamp() <=> $b->getTimestamp());
+
+        $pairs = min(count($ins), count($outs));
+        $total = 0;
+
+        for ($i = 0; $i < $pairs; $i++) {
+            $delta = $outs[$i]->getTimestamp() - $ins[$i]->getTimestamp();
+            if ($delta > 0) $total += $delta;
+        }
+
+        return $total;
+    }
+
+    private function formatDuration(float $seconds): string
+    {
+        $h = floor($seconds / 3600);
+        $m = floor(($seconds % 3600) / 60);
+        $s = floor($seconds % 60);
+        return sprintf('%02dh %02dm %02ds', $h, $m, $s);
     }
 }
