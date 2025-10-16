@@ -4,6 +4,7 @@ import FullCalendar from '@fullcalendar/react'
 import bootstrap5Plugin from '@fullcalendar/bootstrap5';
 import dayGridPlugin from '@fullcalendar/daygrid'
 import resourceTimelinePlugin from '@fullcalendar/resource-timeline';
+import timeGridPlugin from '@fullcalendar/timegrid';
 import frLocale from '@fullcalendar/core/locales/fr'
 import '../styles/kiosk_login.css'
 import '../styles/kiosk_home_main.css'
@@ -34,18 +35,22 @@ const KioskHomePage: React.FC = () => {
                     </div>
                 </div>
                 <div style={{ width: '100%', maxWidth: 700, margin: '0 auto', background: '#fff', borderRadius: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.06)', padding: 24 }}>
-                    <FullCalendar
-                        plugins={[resourceTimelinePlugin, bootstrap5Plugin]}
-                        themeSystem='bootstrap5'
-                        timeZone='Europe/Paris'
-                        locale={frLocale}
-                        initialView="resourceTimeline"
-                        schedulerLicenseKey='CC-Attribution-NonCommercial-NoDerivatives'
-                        resourceAreaHeaderContent='Rooms'
-                        resources='https://fullcalendar.io/api/demo-feeds/resources.json?with-nesting&with-colors'
-                        events='https://fullcalendar.io/api/demo-feeds/events.json?single-day&for-resource-timeline'
-                        editable={true}
-                    />
+    <FullCalendar
+        plugins={[bootstrap5Plugin, dayGridPlugin, timeGridPlugin]}
+        themeSystem="bootstrap5"
+        timeZone="UTC"
+        initialView="timeGridWeek"
+        headerToolbar={{
+            left: 'prev,next',
+            center: 'title',
+            right: 'timeGridDay,timeGridWeek'
+        }}
+        events="https://fullcalendar.io/api/demo-feeds/events.json"
+        locale={frLocale}
+        schedulerLicenseKey="CC-Attribution-NonCommercial-NoDerivatives"
+        editable={true}
+        allDaySlot={false}
+    />
                 </div>
             </div>
         </div>
