@@ -11,7 +11,7 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 
-class TeamsController extends AbstractController
+class TeamsManagementController extends AbstractController
 {
     // ✅ Route POST /teams pour créer une équipe
     #[Route('/teams', name: 'team_create', methods: ['POST'])]

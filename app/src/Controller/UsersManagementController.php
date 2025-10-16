@@ -11,7 +11,7 @@ use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\JsonResponse;
 
-class HomeController extends AbstractController
+class UsersManagementController extends AbstractController
 {
     private $em;
 
