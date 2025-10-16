@@ -1,10 +1,15 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import FullCalendar from '@fullcalendar/react'
+import bootstrap5Plugin from '@fullcalendar/bootstrap5';
 import dayGridPlugin from '@fullcalendar/daygrid'
 import resourceTimelinePlugin from '@fullcalendar/resource-timeline';
+import frLocale from '@fullcalendar/core/locales/fr'
 import '../styles/kiosk_login.css'
 import '../styles/kiosk_home_main.css'
+
+import 'bootstrap/dist/css/bootstrap.css';
+import 'bootstrap-icons/font/bootstrap-icons.css'; 
 
 const users = [
     { id: 'leonie-raymonde', name: 'Leonie Raymonde', role: 'admin', status: 'available' },
@@ -30,8 +35,12 @@ const KioskHomePage: React.FC = () => {
                 </div>
                 <div style={{ width: '100%', maxWidth: 700, margin: '0 auto', background: '#fff', borderRadius: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.06)', padding: 24 }}>
                     <FullCalendar
-                        plugins={[resourceTimelinePlugin]}
-                        initialView="resourceTimelineDay"
+                        plugins={[resourceTimelinePlugin, bootstrap5Plugin]}
+                        themeSystem='bootstrap5'
+                        timeZone='Europe/Paris'
+                        locale={frLocale}
+                        initialView="resourceTimeline"
+                        schedulerLicenseKey='CC-Attribution-NonCommercial-NoDerivatives'
                         resourceAreaHeaderContent='Rooms'
                         resources='https://fullcalendar.io/api/demo-feeds/resources.json?with-nesting&with-colors'
                         events='https://fullcalendar.io/api/demo-feeds/events.json?single-day&for-resource-timeline'
