@@ -27,14 +27,13 @@ const KioskHomePage: React.FC = () => {
 
     return (
         <div className="app">
-            <div className="main" style={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start', minHeight: '100vh', paddingTop: 40 }}>
-                <div style={{ width: 280, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 24 }}>
+                {/* <div style={{ width: 280, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 24 }}>
                     <div style={{ textAlign: 'center', marginBottom: 40 }}>
                         <div className="home-main-title">Home Page</div>
                         <div className="home-main-subtitle">(wip)</div>
                     </div>
-                </div>
-                <div style={{ width: '100%', maxWidth: 700, margin: '0 auto', background: '#fff', borderRadius: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.06)', padding: 24 }}>
+                </div> */}
+                <div style={{ width: '100%', margin: '0 auto', background: '#fff', borderRadius: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.06)', padding: 24 }}>
     <FullCalendar
         plugins={[bootstrap5Plugin, dayGridPlugin, timeGridPlugin]}
         themeSystem="bootstrap5"
@@ -53,7 +52,6 @@ const KioskHomePage: React.FC = () => {
     />
                 </div>
             </div>
-        </div>
     )
 }
 
