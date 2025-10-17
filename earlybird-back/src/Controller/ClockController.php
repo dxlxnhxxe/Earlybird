@@ -65,6 +65,20 @@ class ClockController extends AbstractController
             return new JsonResponse(['error' => 'User is not a member of this team'], 404);
         }
 
+        //Prevent 2 consecutives arrivals or departures
+        $lastClock = $em->getRepository(Clock::class)->findOneBy(
+            ['teamMember' => $teamMember],
+            ['timestamp' => 'DESC']
+        );
+        if ($data['type'] === 'departure') {
+            if (!$lastClock || $lastClock->getType() !== 'arrival') {
+                return new JsonResponse(['error' => 'Cannot Register a departure without a previous arrival'], 400);
+            }
+        }
+        if ($data['type'] === 'arrival' && $lastClock && $lastClock->getType() === 'arrival'){
+            return new JsonResponse(['error' => 'Cannot Register an arrival without a previous departure. Please ask your manager for assistant if a mistake was made.'], 400);
+        }
+
         // Créer un enregistrement Clock
         $clock = new Clock();
         $clock->setTeamMember($teamMember);
