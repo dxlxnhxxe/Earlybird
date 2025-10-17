@@ -74,19 +74,27 @@ class UserReportController extends AbstractController
     #[Route('/reports/salarie/{id}/average-work-time', name: 'reports_employee_avg', methods: ['GET'])]
     public function getEmployeeAverageWorkTime(int $id, Request $request, EntityManagerInterface $em): JsonResponse
     {
+        $day = $request->query->get('day');
+        $week = $request->query->get('week');
         $month = $request->query->get('month');
         $year = $request->query->get('year');
         $period = $request->query->get('period', 'day');
 
-        if (!in_array($period, ['day', 'week', 'month', /*'year'*/], true)) {
-            return new JsonResponse(['error' => ' The period parameter must be one of: day, week, month.'], 400);
+        // Validate period
+        if (!in_array($period, ['day', 'week', 'month', 'year'], true)) {
+            return new JsonResponse([
+                'error' => 'Invalid period value. The "period" parameter must be one of: day, week, month, or year.',
+                'hint' => 'You can also filter by day, week, month, or year in the query string.'
+            ], 400);
         }
 
+        // Validate user existence
         $user = $em->getRepository(User::class)->find($id);
         if (!$user) {
             return new JsonResponse(['error' => 'User not found'], 404);
         }
 
+        // Build query
         $qb = $em->createQueryBuilder()
             ->select('c')
             ->from(Clock::class, 'c')
@@ -96,40 +104,67 @@ class UserReportController extends AbstractController
             ->setParameter('userId', $id)
             ->orderBy('c.timestamp', 'ASC');
 
-        if ($month && $year) {
-            try {
+        // Apply date filters
+        try {
+            if ($day && $month && $year) {
+                $start = new \DateTimeImmutable("$year-$month-$day 00:00:00");
+                $end = $start->modify('+1 day');
+            } elseif ($week && $year) {
+                $dto = new \DateTimeImmutable();
+                $dto = $dto->setISODate((int)$year, (int)$week);
+                $start = $dto->modify('Monday 00:00:00');
+                $end = $start->modify('+1 week');
+            } elseif ($month && $year) {
                 $start = new \DateTimeImmutable("$year-$month-01 00:00:00");
                 $end = $start->modify('+1 month');
-                $qb->andWhere('c.timestamp >= :start')->andWhere('c.timestamp < :end')
+            } elseif ($year) {
+                $start = new \DateTimeImmutable("$year-01-01 00:00:00");
+                $end = $start->modify('+1 year');
+            }
+
+            if (isset($start) && isset($end)) {
+                $qb->andWhere('c.timestamp >= :start')
+                    ->andWhere('c.timestamp < :end')
                     ->setParameter('start', $start)
                     ->setParameter('end', $end);
-            } catch (\Exception $e) {
-                return new JsonResponse(['error' => 'Filtres de date invalides.'], 400);
             }
+        } catch (\Exception $e) {
+            return new JsonResponse(['error' => 'Invalid date filter.'], 400);
         }
 
         $clocks = $qb->getQuery()->getResult();
+
         if (empty($clocks)) {
             return new JsonResponse([
                 'user_id' => $id,
                 'user_name' => $user->getFirstname() . ' ' . $user->getLastname(),
-                'filters' => ['month' => $month ?? 'all', 'year' => $year ?? 'all'],
+                'filters' => [
+                    'day' => $day ?? 'all',
+                    'week' => $week ?? 'all',
+                    'month' => $month ?? 'all',
+                    'year' => $year ?? 'all',
+                    'period' => $period
+                ],
                 'message' => 'Nothing found for the selected period'
             ]);
         }
-        // 🔹 Step 1: Group clocks by chosen period
+
+        // Group clocks by selected period
         $groupedRecords = [];
         foreach ($clocks as $clock) {
             $ts = $clock->getTimestamp();
             switch ($period) {
                 case 'week':
-                    $key = $ts->format('o-W'); // ISO week, e.g. "2025-42"
+                    $key = $ts->format('o-W'); // ISO week
                     break;
                 case 'month':
-                    $key = $ts->format('Y-m'); // "2025-10"
+                    $key = $ts->format('Y-m'); // Year-Month
+                    break;
+                case 'year':
+                    $key = $ts->format('Y'); // Year
                     break;
                 default:
-                    $key = $ts->format('Y-m-d'); // daily
+                    $key = $ts->format('Y-m-d'); // Day
             }
             $groupedRecords[$key][] = [
                 'type' => $clock->getType(),
@@ -137,17 +172,17 @@ class UserReportController extends AbstractController
             ];
         }
 
-        // 🔹 Step 2: Calculate total work seconds per period
+        // Calculate total work seconds per period
         $periodSeconds = [];
         foreach ($groupedRecords as $key => $records) {
-            $periodSeconds[$key] = $this->calculateTotalSeconds($records);
+            $periodSeconds[$key] = $this->calculateTotalSeconds($records); // your existing function
         }
 
         $totalPeriods = count($periodSeconds);
         $totalSeconds = array_sum($periodSeconds);
         $avgSeconds = $totalPeriods > 0 ? $totalSeconds / $totalPeriods : 0;
 
-        // 🔹 Step 3: Build response
+        // Build summary
         $summary = [
             'total_periods' => $totalPeriods,
             'total_work_time' => $this->formatDuration($totalSeconds),
@@ -158,6 +193,8 @@ class UserReportController extends AbstractController
             'user_id' => $id,
             'user_name' => $user->getFirstname() . ' ' . $user->getLastname(),
             'filters' => [
+                'day' => $day ?? 'all',
+                'week' => $week ?? 'all',
                 'month' => $month ?? 'all',
                 'year' => $year ?? 'all',
                 'period' => $period
