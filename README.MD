@@ -15,9 +15,11 @@
 ## 🚀 Getting Started
 
 ### Prerequisites
-- **Frontend:** Node.js (for React)
-- **Backend:** PHP 7.4+ (with Composer)
-- **Database:** (We don't know yet)
+- Docker Desktop (recommended)
+- Or, manually:
+   - Frontend: Node.js (for React/Vite)
+   - Backend: PHP 8.2+ (with Composer)
+   - Database: PostgreSQL 16
 
 ---
 
@@ -38,9 +40,9 @@
    ```
 
 #### Backend (PHP)
-1. Navigate to the `earlybird-backend` directory:
+1. Navigate to the `app` directory:
    ```bash
-   cd earlybird-backend
+   cd app
    ```
 2. Install PHP dependencies:
    ```bash
@@ -53,6 +55,20 @@
    ```
 
 ---
+
+### Run everything with Docker
+
+From the repository root:
+
+```bash
+docker compose up --build
+```
+
+- Frontend: http://localhost:3000
+- Backend API (Symfony): http://localhost:8080
+- Database: PostgreSQL exposed on localhost:5432 (default creds symfony/symfony, db "database")
+
+The frontend reads API base URL from the env variable `VITE_API_BASE_URL` (defaults to `http://localhost:8080`). To override, set it in `earlybird-front/.env` before building.
 
 ## 📝 Usage
 1. **Create a Project:** Add a project or task in the dashboard.
