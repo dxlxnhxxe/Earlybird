@@ -4,7 +4,7 @@
 FROM php:8.2-cli
 
 # Définir le dossier de travail
-WORKDIR /app
+WORKDIR /earlybird-back
 
 # Installer les dépendances système + extension PostgreSQL
 RUN apt-get update && apt-get install -y \
