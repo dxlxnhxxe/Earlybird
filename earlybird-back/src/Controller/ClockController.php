@@ -95,7 +95,7 @@ class ClockController extends AbstractController
                 'user' => $user->getFirstname() . ' ' . $user->getLastname(),
                 'team' => $team->getName(),
                 'type' => $clock->getType(),
-                'timestamp' => $clock->getTimestamp()->format('Y-m-d H:i:s')
+                'timestamp' => $clock->getTimestamp()->format('d-m-Y H:i:s')
             ]
         ], 201);
     }
@@ -125,7 +125,7 @@ class ClockController extends AbstractController
         $data = array_map(function (Clock $clock) use ($team) {
             return [
                 'id' => $clock->getId(),
-                'timestamp' => $clock->getTimestamp()->format('Y-m-d H:i:s'),
+                'timestamp' => $clock->getTimestamp()->format('d-m-Y H:i:s'),
                 'type' => $clock->getType(),
                 'team' => $team->getName(),
             ];
@@ -172,7 +172,7 @@ class ClockController extends AbstractController
             $clock->setType($data['type']);
         }
         if (isset($data['timestamp'])) {
-            $dt = \DateTime::createFromFormat('Y-m-d H:i:s', $data['timestamp']);
+            $dt = \DateTime::createFromFormat('d-m-Y H:i:s', $data['timestamp']);
             if ($dt) {
                 $clock->setTimestamp($dt);
             }

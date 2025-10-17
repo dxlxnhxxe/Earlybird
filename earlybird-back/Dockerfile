@@ -15,6 +15,10 @@ RUN apt-get update && apt-get install -y \
     postgresql-client \
     && docker-php-ext-install pdo pdo_pgsql
 
+# Configure PHP timezone
+ENV TZ=Europe/Paris
+RUN echo "date.timezone=${TZ}" > /usr/local/etc/php/conf.d/timezone.ini
+
 # ==========================
 # Étape 2 : Installation de Composer
 # ==========================
