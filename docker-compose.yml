@@ -1,0 +1,46 @@
+services:
+  database:
+    image: postgres:${POSTGRES_VERSION:-16}-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-database}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-symfony}
+      POSTGRES_USER: ${POSTGRES_USER:-symfony}
+    healthcheck:
+      test: ["CMD", "pg_isready", "-d", "${POSTGRES_DB:-database}", "-U", "${POSTGRES_USER:-symfony}"]
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+    volumes:
+      - db_data:/var/lib/postgresql/data:rw
+      - ./app/docker/init/dump.sql:/docker-entrypoint-initdb.d/dump.sql:ro
+    ports:
+      - "5432:5432"
+
+  backend:
+    build:
+      context: ./app
+    container_name: symfony_app
+    working_dir: /app
+    volumes:
+      - ./app:/app
+    ports:
+      - "8080:8000"
+    depends_on:
+      database:
+        condition: service_healthy
+    environment:
+      # Keep this in sync with app/config/packages/doctrine.yaml server version
+      DATABASE_URL: postgresql://symfony:symfony@database:5432/database?serverVersion=16&charset=utf8
+
+  frontend:
+    build:
+      context: ./earlybird-front
+    environment:
+      NODE_ENV: production
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+
+volumes:
+  db_data:
