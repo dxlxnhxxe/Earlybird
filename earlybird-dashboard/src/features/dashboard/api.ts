@@ -15,7 +15,7 @@ export type ApiOverview = {
 }
 
 export async function fetchTeamAverages(period: string = 'day'): Promise<ApiOverview> {
-  const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'
+  const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://earlybird-api'
   const res = await fetch(`${baseUrl}/team-averages?period=${encodeURIComponent(period)}`)
   if (!res.ok) throw new Error('Failed to fetch team averages')
   return res.json()

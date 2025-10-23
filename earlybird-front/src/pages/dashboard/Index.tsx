@@ -41,7 +41,7 @@ type ApiDailyWorkTime = {
   average_work_time?: string
 }
 
-const apiBase = 'http://localhost:8080'
+const apiBase = 'http://earlybird-api'
 
 const DashboardIndex: React.FC = () => {
   const [teamKpis, setTeamKpis] = useState<TeamKPI[]>([])
