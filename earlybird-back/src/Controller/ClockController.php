@@ -100,6 +100,45 @@ class ClockController extends AbstractController
         ], 201);
     }
 
+    /**
+     * Get all clocks
+     *
+     * @OA\Get(
+     *     path="/clocks/all",
+     *     summary="Get all clock entries",
+     *     @OA\Response(response=200, description="List of all clocks")
+     * )
+     */
+    #[Route('/clocks/all', name: 'clocks_all', methods: ['GET'])]
+    public function getAllClocks(EntityManagerInterface $em): JsonResponse
+    {
+        $clocks = $em->getRepository(Clock::class)->findBy([], ['timestamp' => 'DESC']);
+        
+        $data = array_map(function (Clock $clock) {
+            $teamMember = $clock->getTeamMember();
+            $user = $teamMember->getUser();
+            $team = $teamMember->getTeam();
+            
+            return [
+                'id' => $clock->getId(),
+                'timestamp' => $clock->getTimestamp()->format('d-m-Y H:i:s'),
+                'type' => $clock->getType(),
+                'user' => [
+                    'id' => $user->getId(),
+                    'firstname' => $user->getFirstname(),
+                    'lastname' => $user->getLastname(),
+                    'email' => $user->getEmail(),
+                ],
+                'team' => [
+                    'id' => $team->getId(),
+                    'name' => $team->getName(),
+                ],
+            ];
+        }, $clocks);
+        
+        return new JsonResponse(['clocks' => $data], 200);
+    }
+
     // ✅ GET /clocks?user_id=...&team_id=...
     #[Route('/clocks', name: 'user_team_clocks', methods: ['GET'])]
     public function getUserTeamClocks(Request $request, EntityManagerInterface $em): JsonResponse
