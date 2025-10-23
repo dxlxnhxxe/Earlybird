@@ -13,7 +13,7 @@ export type ApiUser = {
 }
 
 export async function fetchUsers(): Promise<ApiUser[]> {
-  const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'
+  const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://earlybird-api'
   const res = await fetch(`${baseUrl}/users`)
   if (!res.ok) throw new Error('Failed to fetch users')
   return res.json()
@@ -29,7 +29,7 @@ export type CreateUserPayload = {
 }
 
 export async function createUser(payload: CreateUserPayload): Promise<ApiUser> {
-  const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'
+  const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://earlybird-api'
   const res = await fetch(`${baseUrl}/users`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -55,7 +55,7 @@ export async function updateUser(
   id: string | number,
   payload: UpdateUserPayload
 ): Promise<ApiUser> {
-  const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'
+  const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://earlybird-api'
   const res = await fetch(`${baseUrl}/users/${id}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
@@ -69,7 +69,7 @@ export async function updateUser(
 }
 
 export async function deleteUser(id: string | number): Promise<void> {
-  const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'
+  const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://earlybird-api'
   const res = await fetch(`${baseUrl}/users/${id}`, {
     method: 'DELETE',
   })
