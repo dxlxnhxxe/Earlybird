@@ -1,6 +1,7 @@
 services:
   database:
     image: postgres:${POSTGRES_VERSION:-16}-alpine
+    container_name: database
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-database}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-symfony}
@@ -19,7 +20,7 @@ services:
   backend:
     build:
       context: ./earlybird-back
-    container_name: symfony_app
+    container_name: backend
     working_dir: /earlybird-back
     volumes:
       - ./earlybird-back:/earlybird-back
@@ -35,12 +36,24 @@ services:
   frontend:
     build:
       context: ./earlybird-front
+    container_name: frontend
     environment:
       NODE_ENV: production
     ports:
       - "3000:3000"
     depends_on:
       - backend
+
+  dashboard:
+    build:
+      context: ./earlybird-dashboard
+    container_name: dashboard
+    ports:
+      - "5173:5173"
+    depends_on:
+      - backend
+    environment:
+      - VITE_API_BASE_URL=http://localhost:8080
 
 volumes:
   db_data:

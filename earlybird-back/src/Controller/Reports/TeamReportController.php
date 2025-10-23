@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Controller;
+namespace App\Controller\Reports;
 
 use App\Entity\Clock;
 use App\Entity\Team;
@@ -10,7 +10,7 @@ use Symfony\Component\Routing\Annotation\Route;
 
 class TeamReportController
 {
-    #[Route('/reports/team-averages', name: 'reports_team_averages', methods: ['GET'])]
+    #[Route('/team-averages', name: 'team_averages', methods: ['GET'])]
     public function getTeamsAverageWorkTime(EntityManagerInterface $em, \Symfony\Component\HttpFoundation\Request $request): JsonResponse
     {
         $period = $request->query->get('period', 'day');

@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Controller;
+namespace App\Controller\Reports;
 
 use App\Entity\User;
 use App\Entity\Clock;
@@ -12,7 +12,7 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 
 class UserReportController extends AbstractController
 {
-    #[Route('/reports/employee/{id}/daily-work-time', name: 'reports_employee_daily', methods: ['GET'])]
+    #[Route('/employee/{id}/daily-work-time', name: 'employee_daily', methods: ['GET'])]
     public function getEmployeeDailyWorkTime(int $id, Request $request, EntityManagerInterface $em): JsonResponse
     {
         $dateStr = $request->query->get('date');
@@ -71,7 +71,7 @@ class UserReportController extends AbstractController
         ]);
     }
 
-    #[Route('/reports/salarie/{id}/average-work-time', name: 'reports_employee_avg', methods: ['GET'])]
+    #[Route('/employee/{id}/average-work-time', name: 'employee_avg', methods: ['GET'])]
     public function getEmployeeAverageWorkTime(int $id, Request $request, EntityManagerInterface $em): JsonResponse
     {
         $day = $request->query->get('day');
@@ -203,7 +203,7 @@ class UserReportController extends AbstractController
         ]);
     }
 
-    #[Route('/reports', name: 'reports_global', methods: ['GET'])]
+    #[Route('/', name: 'global', methods: ['GET'])]
     public function getGlobalReport(EntityManagerInterface $em): JsonResponse
     {
         $users = $em->getRepository(User::class)->findAll();
@@ -235,7 +235,7 @@ class UserReportController extends AbstractController
     }
 
 
-    #[Route('/reports/filter', name: 'reports_global_filtered', methods: ['GET'])]
+    #[Route('/filter', name: 'global_filtered', methods: ['GET'])]
     public function getGlobalReportFiltered(Request $request, EntityManagerInterface $em): JsonResponse
     {
         $month = $request->query->get('month');
