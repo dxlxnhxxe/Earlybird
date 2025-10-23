@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import {
+  type ColumnFiltersState,
   type SortingState,
   type VisibilityState,
   flexRender,
@@ -32,7 +33,7 @@ export function TeamsTable({ data }: TeamsTableProps) {
   const [rowSelection, setRowSelection] = useState({})
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({})
   const [sorting, setSorting] = useState<SortingState>([])
-  const [columnFilters, setColumnFilters] = useState([])
+  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
 
   // eslint-disable-next-line react-hooks/incompatible-library
   const table = useReactTable({
