@@ -24,13 +24,12 @@ class Team
     #[ORM\Column(type: 'text', nullable: true)]
     private ?string $description = null;
 
-    // ✅ One-to-One relation vers User (manager)
-    #[ORM\OneToOne(targetEntity: User::class, inversedBy: 'managedTeam')]
-    #[ORM\JoinColumn(nullable: true, unique: true, onDelete: 'SET NULL')]
+    // 🔹 Many-to-One : un manager peut gérer plusieurs équipes
+    #[ORM\ManyToOne(targetEntity: User::class, inversedBy: 'managedTeams')]
+    #[ORM\JoinColumn(nullable: true, onDelete: 'SET NULL')]
     private ?User $manager = null;
 
-
-    // ✅ One-to-Many relation to TeamMember entity (memberships)
+    // 🔹 One-to-Many : une équipe a plusieurs TeamMember
     #[ORM\OneToMany(mappedBy: 'team', targetEntity: TeamMember::class, cascade: ['persist', 'remove'])]
     private Collection $memberships;
 
@@ -39,7 +38,7 @@ class Team
         $this->memberships = new ArrayCollection();
     }
 
-    // 🔹 Getters & Setters
+    // === Getters & Setters ===
 
     public function getId(): ?int
     {
@@ -79,9 +78,7 @@ class Team
         return $this;
     }
 
-    /**
-     * @return Collection<int, TeamMember>
-     */
+    /** @return Collection<int, TeamMember> */
     public function getMemberships(): Collection
     {
         return $this->memberships;
@@ -98,12 +95,15 @@ class Team
 
     public function removeMembership(TeamMember $membership): static
     {
-        if ($this->memberships->removeElement($membership)) {
-            // set the owning side to null (unless already changed)
-            if ($membership->getTeam() === $this) {
-                $membership->setTeam(null);
-            }
+        if ($this->memberships->removeElement($membership) && $membership->getTeam() === $this) {
+            $membership->setTeam(null);
         }
         return $this;
+    }
+
+    // 🔹 Optionnel : pratique pour le débogage / affichage
+    public function __toString(): string
+    {
+        return sprintf('Team #%d - %s', $this->id ?? 0, $this->name ?? '');
     }
 }

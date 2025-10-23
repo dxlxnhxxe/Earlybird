@@ -6,10 +6,19 @@ use App\Repository\UserRepository;
 use Doctrine\ORM\Mapping as ORM;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
+use Symfony\Component\Security\Core\User\UserInterface;
+use Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface;
+use App\Entity\Team;
+use App\Entity\TeamMember;
+
+/**
+ * Simple embeddable Profile value object so the embedded mapping in User works.
+ */
+#[ORM\Embeddable]
 
 #[ORM\Entity(repositoryClass: UserRepository::class)]
 #[ORM\Table(name: '`user`')]
-class User
+class User implements UserInterface, PasswordAuthenticatedUserInterface
 {
     #[ORM\Id]
     #[ORM\GeneratedValue]
@@ -22,20 +31,36 @@ class User
     #[ORM\Column(length: 255)]
     private ?string $lastname = null;
 
-    #[ORM\Column(length: 255)]
+    #[ORM\Column(length: 255, unique: true)]
     private ?string $email = null;
 
-    #[ORM\Column(length: 255)]
-    private ?string $phone_number = null;
+    #[ORM\Column(name: 'phone_number', length: 255)]
+    private ?string $phoneNumber = null;
 
-    #[ORM\Column(length: 255)]
+    #[ORM\Column]
     private ?string $password = null;
 
     #[ORM\Column(length: 255)]
-    private ?string $role = null;
+    private ?string $role = 'ROLE_EMPLOYEE';
 
-    #[ORM\Column]
-    private ?int $code_pin = null;
+    #[ORM\Column(name: 'code_pin', nullable: true)]
+    private ?int $codePin = null;
+
+    // Un manager peut gérer plusieurs teams
+    #[ORM\OneToMany(mappedBy: 'manager', targetEntity: Team::class)]
+    private Collection $managedTeams;
+
+    // Un user peut être membre de plusieurs teams
+    #[ORM\ManyToMany(targetEntity: Team::class, mappedBy: 'members')]
+    private Collection $teams;
+
+    public function __construct()
+    {
+        $this->teams = new ArrayCollection();
+        $this->managedTeams = new ArrayCollection();
+    }
+
+    // === Getters / Setters ===
 
     public function getId(): ?int
     {
@@ -47,7 +72,7 @@ class User
         return $this->firstname;
     }
 
-    public function setFirstname(string $firstname): static
+    public function setFirstname(?string $firstname): static
     {
         $this->firstname = $firstname;
         return $this;
@@ -77,12 +102,12 @@ class User
 
     public function getPhoneNumber(): ?string
     {
-        return $this->phone_number;
+        return $this->phoneNumber;
     }
 
-    public function setPhoneNumber(string $phone_number): static
+    public function setPhoneNumber(string $phoneNumber): static
     {
-        $this->phone_number = $phone_number;
+        $this->phoneNumber = $phoneNumber;
         return $this;
     }
 
@@ -99,7 +124,7 @@ class User
 
     public function getRole(): ?string
     {
-        return $this->role;
+        return $this->role ?? 'ROLE_EMPLOYEE';
     }
 
     public function setRole(string $role): static
@@ -110,34 +135,29 @@ class User
 
     public function getCodePin(): ?int
     {
-        return $this->code_pin;
+        return $this->codePin;
     }
 
-    public function setCodePin(int $code_pin): static
+    public function setCodePin(?int $codePin): static
     {
-        $this->code_pin = $code_pin;
+        $this->codePin = $codePin;
         return $this;
     }
 
-    #[ORM\OneToOne(mappedBy: 'manager', targetEntity: Team::class)]
-    private ?Team $managedTeam = null;
+    // === Relations avec Team ===
 
-    #[ORM\ManyToMany(targetEntity: Team::class, mappedBy: 'members')]
-    private Collection $teams;
-
-    public function __construct()
+    /** @return Collection<int, Team> */
+    public function getManagedTeams(): Collection
     {
-        $this->teams = new ArrayCollection();
+        return $this->managedTeams;
     }
 
-    public function getManagedTeam(): ?Team
+    public function addManagedTeam(Team $team): static
     {
-        return $this->managedTeam;
-    }
-
-    public function setManagedTeam(?Team $team): static
-    {
-        $this->managedTeam = $team;
+        if (!$this->managedTeams->contains($team)) {
+            $this->managedTeams->add($team);
+            $team->setManager($this);
+        }
         return $this;
     }
 
@@ -145,23 +165,53 @@ class User
     {
         return $this->teams;
     }
-
     public function addTeam(Team $team): static
     {
         if (!$this->teams->contains($team)) {
             $this->teams->add($team);
-            $team->addMember($this);
+            // create a TeamMember entity and link it to this User and the Team,
+            // because Team::addMembership() expects a TeamMember instance
+            $teamMember = new TeamMember();
+            $teamMember->setUser($this);
+            $teamMember->setTeam($team);
+            $team->addMembership($teamMember);
         }
-
         return $this;
     }
 
-    public function removeTeam(Team $team): static
-    {
-        if ($this->teams->removeElement($team)) {
-            $team->removeMember($this);
-        }
+    // === Méthodes requises par UserInterface ===
 
-        return $this;
+    public function getUserIdentifier(): string
+    {
+        return (string) $this->email;
+    }
+
+    public function getRoles(): array
+    {
+        // Convertir les rôles de base de données vers les rôles Symfony
+        $role = match($this->role) {
+            'admin' => 'ROLE_ADMIN',
+            'manager' => 'ROLE_MANAGER',
+            'user' => 'ROLE_USER',
+            default => 'ROLE_USER' // Rôle par défaut
+        };
+        
+        return array_unique([$role]);
+    }
+
+    public function eraseCredentials(): void
+    {
+        /* This method is intentionally left blank because this User entity
+           does not hold any temporary or sensitive credentials (e.g. plain
+           text passwords) that need to be cleared after authentication.
+           If you later add such transient properties (for example
+           $this->plainPassword), clear them here, e.g.:
+           $this->plainPassword = null;
+        */
+    }
+
+    public function getSalt(): ?string
+    {
+        return null;
     }
 }
