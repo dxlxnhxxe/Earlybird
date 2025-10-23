@@ -45,8 +45,8 @@ security:
         #- { path: ^/clocks, roles: ROLE_USER }        # Pointages: tous les utilisateurs connectés
         #- { path: ^/reports, roles: ROLE_MANAGER }    # Rapports: manager+
         
-        # Route par défaut: utilisateur connecté
-        - { path: ^/, roles: IS_AUTHENTICATED_FULLY }
+        # Route par défaut: utilisateur connecté (commented out for development)
+        #- { path: ^/, roles: IS_AUTHENTICATED_FULLY }
 
 when@test:
     security:
