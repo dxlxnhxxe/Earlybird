@@ -49,7 +49,7 @@ const KioskHomePage: React.FC = () => {
         setLoading(true)
         setError('')
         try {
-            const res = await fetch('http://localhost:8080/clocks', {
+            const res = await fetch('http://earlybird-api/clocks', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ user_id: 1, type: 'arrival' })
@@ -86,7 +86,7 @@ const KioskHomePage: React.FC = () => {
         setLoading(true)
         setError('')
         try {
-            const res = await fetch('http://localhost:8080/clocks', {
+            const res = await fetch('http://earlybird-api/clocks', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ user_id: 1, type: 'departure' })

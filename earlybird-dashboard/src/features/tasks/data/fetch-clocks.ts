@@ -16,7 +16,7 @@ export type ApiClock = {
 }
 
 export async function fetchClocks(): Promise<ApiClock[]> {
-  const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'
+  const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://earlybird-api'
   const res = await fetch(`${baseUrl}/clocks/all`)
   if (!res.ok) throw new Error('Failed to fetch clocks')
   const data = await res.json()
@@ -30,7 +30,7 @@ export type CreateClockPayload = {
 }
 
 export async function createClock(payload: CreateClockPayload): Promise<ApiClock> {
-  const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'
+  const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://earlybird-api'
   const res = await fetch(`${baseUrl}/clocks`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -53,7 +53,7 @@ export async function updateClock(
   id: number,
   payload: UpdateClockPayload
 ): Promise<void> {
-  const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'
+  const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://earlybird-api'
   const res = await fetch(`${baseUrl}/clocks/${id}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
@@ -66,7 +66,7 @@ export async function updateClock(
 }
 
 export async function deleteClock(id: number): Promise<void> {
-  const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'
+  const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://earlybird-api'
   const res = await fetch(`${baseUrl}/clocks/${id}`, {
     method: 'DELETE',
   })

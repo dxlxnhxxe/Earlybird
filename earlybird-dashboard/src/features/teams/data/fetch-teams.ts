@@ -20,7 +20,7 @@ export type ApiTeam = {
 }
 
 export async function fetchTeams(): Promise<ApiTeam[]> {
-  const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'
+  const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://earlybird-api'
   const res = await fetch(`${baseUrl}/teams`)
   if (!res.ok) throw new Error('Failed to fetch teams')
   return await res.json()
@@ -38,7 +38,7 @@ export type CreateTeamPayload = {
 }
 
 export async function createTeam(payload: CreateTeamPayload): Promise<ApiTeam> {
-  const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'
+  const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://earlybird-api'
   const res = await fetch(`${baseUrl}/teams`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -67,7 +67,7 @@ export async function updateTeam(
   id: number,
   payload: UpdateTeamPayload
 ): Promise<void> {
-  const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'
+  const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://earlybird-api'
   const res = await fetch(`${baseUrl}/teams/${id}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
@@ -80,7 +80,7 @@ export async function updateTeam(
 }
 
 export async function deleteTeam(id: number): Promise<void> {
-  const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'
+  const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://earlybird-api'
   const res = await fetch(`${baseUrl}/teams/${id}`, {
     method: 'DELETE',
   })
