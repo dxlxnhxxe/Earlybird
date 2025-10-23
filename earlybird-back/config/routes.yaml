@@ -7,3 +7,6 @@ reports:
   type: attribute
   prefix: /reports
   name_prefix: reports_
+  
+gesdinet_jwt_refresh_token:
+    path: /api/token/refresh
