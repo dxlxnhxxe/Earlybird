@@ -40,7 +40,7 @@ security:
         - { path: ^/token/refresh, roles: PUBLIC_ACCESS }
 
         # Routes protégées par rôles
-        #- { path: ^/users, roles: ROLE_ADMIN }        # Gestion utilisateurs: admin seulement
+        - { path: ^/users, roles: ROLE_ADMIN }        # Gestion utilisateurs: admin seulement
         #- { path: ^/teams, roles: ROLE_MANAGER }      # Gestion équipes: manager+ 
         #- { path: ^/clocks, roles: ROLE_USER }        # Pointages: tous les utilisateurs connectés
         #- { path: ^/reports, roles: ROLE_MANAGER }    # Rapports: manager+

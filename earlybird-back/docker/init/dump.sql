@@ -92,7 +92,7 @@ INSERT INTO team_member (team_id, user_id, start_time, end_time) VALUES
 
 
 -- =========================================================
--- 🔹 TABLE: clock
+--  TABLE: clock
 -- =========================================================
 CREATE TABLE IF NOT EXISTS clock (
     id SERIAL PRIMARY KEY,
@@ -102,4 +102,20 @@ CREATE TABLE IF NOT EXISTS clock (
     start_time TIME,
     end_time TIME
 );
--- ✅ Données d’exemple pour la table clock
+--  Données d'exemple pour la table clock
+
+-- =========================================================
+--  TABLE: refresh_tokens (JWT Refresh Token Bundle)
+-- =========================================================
+CREATE TABLE IF NOT EXISTS refresh_tokens (
+    id SERIAL PRIMARY KEY,
+    refresh_token VARCHAR(128) NOT NULL UNIQUE,
+    username VARCHAR(255) NOT NULL,
+    valid TIMESTAMP NOT NULL
+);
+
+-- Index pour optimiser les recherches par token
+CREATE INDEX IF NOT EXISTS idx_refresh_token ON refresh_tokens(refresh_token);
+CREATE INDEX IF NOT EXISTS idx_refresh_token_username ON refresh_tokens(username);
+
+-- ✅ Table refresh_tokens créée pour la gestion des tokens JWT
