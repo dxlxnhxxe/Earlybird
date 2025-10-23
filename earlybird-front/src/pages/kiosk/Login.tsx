@@ -25,7 +25,7 @@ const LoginPin = () => {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    fetch('http://localhost:8080/users')
+    fetch('http://earlybird-api/users')
       .then(res => res.json())
       .then(data => {
         setUsers(data);

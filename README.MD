@@ -58,17 +58,60 @@
 
 ### Run everything with Docker
 
+**Step 1: Configure local DNS**
+
+**Option A - Automatic (Recommended):**
+
+Run the setup script for your OS:
+- **Windows**: Right-click PowerShell → "Run as Administrator" → `.\setup-hosts.ps1`
+- **Linux/Mac**: `sudo ./setup-hosts.sh`
+
+**Option B - Manual:**
+
+Add these lines to your hosts file:
+- **Windows**: `C:\Windows\System32\drivers\etc\hosts` (run as Administrator)
+- **Linux/Mac**: `/etc/hosts`
+
+```
+127.0.0.1 earlybird-front
+127.0.0.1 earlybird-dashboard
+127.0.0.1 earlybird-api
+```
+
+**Step 2: Start the services**
+
 From the repository root:
 
 ```bash
 docker compose up --build
 ```
 
-- Frontend: http://localhost:3000
-- Backend API (Symfony): http://localhost:8080
-- Database: PostgreSQL exposed on localhost:5432 (default creds symfony/symfony, db "database")
+**Step 3: Access the application**
 
-The frontend reads API base URL from the env variable `VITE_API_BASE_URL` (defaults to `http://localhost:8080`). To override, set it in `earlybird-front/.env` before building.
+- **Main Application:** http://earlybird-front (Frontend)
+- **Dashboard:** http://earlybird-dashboard (Manager Dashboard)
+- **API:** http://earlybird-api (Backend API)
+- **Health Check:** http://localhost/health
+
+The reverse proxy uses subdomain-based virtual hosts on port 80:
+- `earlybird-front` → Frontend (React)
+- `earlybird-dashboard` → Manager Dashboard (React)
+- `earlybird-api` → Backend API (Symfony)
+
+**Architecture:**
+```
+Port 80 (Reverse Proxy - Virtual Hosts)
+    ├── earlybird-api       → Backend (Symfony, internal port 8000)
+    ├── earlybird-dashboard → Dashboard (React, internal port 5173)
+    ├── earlybird-front     → Frontend (React, internal port 3000)
+    └── localhost           → Health check & redirect
+```
+
+**Database:** PostgreSQL (internal access only, not exposed externally)
+- Default credentials: symfony/symfony
+- Database name: "database"
+
+For more details about the reverse proxy configuration, see [reverse-proxy/README.md](reverse-proxy/README.md).
 
 ## 📝 Usage
 1. **Create a Project:** Add a project or task in the dashboard.

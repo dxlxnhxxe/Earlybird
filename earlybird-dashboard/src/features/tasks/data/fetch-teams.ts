@@ -20,7 +20,7 @@ export type ApiTeam = {
 }
 
 export async function fetchTeams(): Promise<ApiTeam[]> {
-  const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'
+  const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://earlybird-api'
   const res = await fetch(`${baseUrl}/teams`)
   if (!res.ok) throw new Error('Failed to fetch teams')
   return await res.json()

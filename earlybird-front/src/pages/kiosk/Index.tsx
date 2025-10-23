@@ -10,7 +10,7 @@ const IndexPage: React.FC = () => {
     const [loading, setLoading] = useState(true)
 
     useEffect(() => {
-        fetch('http://localhost:8080/users')
+        fetch('http://earlybird-api/users')
             .then((res) => res.json())
             .then((data) => setUsers(data))
             .catch((err) => console.error('Failed to fetch users:', err))
