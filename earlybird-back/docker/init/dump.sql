@@ -1,7 +1,5 @@
 --
 -- PostgreSQL database dump for EarlyBird Backend
--- Version: 16
--- Generated: 2025-10-10
 --
 
 -- =========================================================
@@ -63,11 +61,11 @@ CREATE TABLE IF NOT EXISTS "team_member" (
 );
 
 -- ✅ Données d’exemple pour la table team
-INSERT INTO "team" (id, name, description, manager_id) VALUES
-(1, 'Backend Team', 'Responsible for APIs and data layer', 3),
-(2, 'DevOps Team', 'Handles deployment and CI/CD pipelines', 1),
-(3, 'AI Team', 'Focuses on machine learning models', 2),
-(4, 'All Users', 'All users in the system', 3);
+INSERT INTO "team" (name, description, manager_id) VALUES
+('Backend Team', 'Responsible for APIs and data layer', 3),
+('DevOps Team', 'Handles deployment and CI/CD pipelines', 1),
+('AI Team', 'Focuses on machine learning models', 2),
+('All Users', 'All users in the system', 3);
 
 INSERT INTO team_member (team_id, user_id, start_time, end_time) VALUES
     (1, 1, '09:00', '17:00'),
