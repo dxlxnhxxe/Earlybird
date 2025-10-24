@@ -9,10 +9,27 @@ import { TeamsPrimaryButtons } from './components/teams-primary-buttons'
 import { TeamsProvider } from './components/teams-provider'
 import { TeamsTable } from './components/teams-table'
 import { useTeams } from './data/teams'
+import { useTeamStore } from '@/stores/team-store'
+import { useNavigate } from '@tanstack/react-router'
+import { useEffect } from 'react'
 import { Loader2 } from 'lucide-react'
 
 export function Teams() {
   const { teams, loading, error, refetch } = useTeams()
+  const { isAdminTeam } = useTeamStore()
+  const navigate = useNavigate()
+
+  // Redirect non-admin users away from teams page
+  useEffect(() => {
+    if (!isAdminTeam) {
+      navigate({ to: '/' })
+    }
+  }, [isAdminTeam, navigate])
+
+  // Don't render anything if user is not admin
+  if (!isAdminTeam) {
+    return null
+  }
 
   return (
     <TeamsProvider refetch={refetch}>

@@ -12,9 +12,10 @@ export type ApiUser = {
   updatedAt?: string
 }
 
-export async function fetchUsers(): Promise<ApiUser[]> {
+export async function fetchUsers(teamId?: number): Promise<ApiUser[]> {
   const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://earlybird-api'
-  const res = await fetch(`${baseUrl}/users`)
+  const url = teamId ? `${baseUrl}/users?team_id=${teamId}` : `${baseUrl}/users`
+  const res = await fetch(url)
   if (!res.ok) throw new Error('Failed to fetch users')
   return res.json()
 }
@@ -26,6 +27,7 @@ export type CreateUserPayload = {
   phone_number: string
   password: string
   role: string
+  code_pin?: number
 }
 
 export async function createUser(payload: CreateUserPayload): Promise<ApiUser> {
@@ -49,6 +51,7 @@ export type UpdateUserPayload = {
   phone_number?: string
   password?: string
   role?: string
+  code_pin?: number
 }
 
 export async function updateUser(

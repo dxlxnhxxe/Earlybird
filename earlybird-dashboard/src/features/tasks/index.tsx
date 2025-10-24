@@ -9,10 +9,13 @@ import { TasksPrimaryButtons } from './components/tasks-primary-buttons'
 import { TasksProvider } from './components/tasks-provider'
 import { TasksTable } from './components/tasks-table'
 import { useClocks } from './data/clocks'
+import { useTeamStore } from '@/stores/team-store'
 import { Loader2 } from 'lucide-react'
 
 export function Tasks() {
-  const { clocks, loading, error, refetch } = useClocks()
+  const { selectedTeam, isAdminTeam } = useTeamStore()
+  const teamId = isAdminTeam ? undefined : selectedTeam?.id
+  const { clocks, loading, error, refetch } = useClocks(teamId)
 
   return (
     <TasksProvider refetch={refetch}>
@@ -31,6 +34,16 @@ export function Tasks() {
             <h2 className='text-2xl font-bold tracking-tight'>Clocks</h2>
             <p className='text-muted-foreground'>
               Here&apos;s a list of all clock entries (arrivals and departures).
+              {selectedTeam && !isAdminTeam && (
+                <span className='block text-sm font-medium text-primary'>
+                  Showing clocks from: {selectedTeam.name}
+                </span>
+              )}
+              {isAdminTeam && (
+                <span className='block text-sm font-medium text-primary'>
+                  Admin view: Showing all clocks
+                </span>
+              )}
             </p>
           </div>
           <TasksPrimaryButtons />

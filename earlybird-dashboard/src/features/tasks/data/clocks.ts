@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { fetchClocks, type ApiClock } from './fetch-clocks'
 
-export function useClocks() {
+export function useClocks(teamId?: number) {
   const [clocks, setClocks] = useState<ApiClock[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -9,13 +9,13 @@ export function useClocks() {
   const refetch = useCallback(() => {
     setLoading(true)
     setError(null)
-    fetchClocks()
+    fetchClocks(teamId)
       .then((apiClocks) => {
         setClocks(apiClocks)
       })
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false))
-  }, [])
+  }, [teamId])
 
   useEffect(() => {
     refetch()
