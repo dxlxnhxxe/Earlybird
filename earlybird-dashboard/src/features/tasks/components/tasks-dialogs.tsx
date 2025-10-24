@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import { ConfirmDialog } from '@/components/confirm-dialog'
-import { TasksImportDialog } from './tasks-import-dialog'
 import { TasksMutateDrawer } from './tasks-mutate-drawer'
 import { useTasks } from './tasks-provider'
 import { deleteClock } from '../data/fetch-clocks'
@@ -32,21 +31,13 @@ export function TasksDialogs() {
   return (
     <>
       <TasksMutateDrawer
-        key='clock-create'
         open={open === 'create'}
         onOpenChange={() => setOpen('create')}
-      />
-
-      <TasksImportDialog
-        key='clocks-import'
-        open={open === 'import'}
-        onOpenChange={() => setOpen('import')}
       />
 
       {currentRow && (
         <>
           <TasksMutateDrawer
-            key={`clock-update-${currentRow.id}`}
             open={open === 'update'}
             onOpenChange={() => {
               setOpen('update')
@@ -58,7 +49,6 @@ export function TasksDialogs() {
           />
 
           <ConfirmDialog
-            key='clock-delete'
             destructive
             open={open === 'delete'}
             onOpenChange={() => {
