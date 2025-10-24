@@ -26,6 +26,7 @@ export type CreateUserPayload = {
   phone_number: string
   password: string
   role: string
+  code_pin?: number
 }
 
 export async function createUser(payload: CreateUserPayload): Promise<ApiUser> {
@@ -49,6 +50,7 @@ export type UpdateUserPayload = {
   phone_number?: string
   password?: string
   role?: string
+  code_pin?: number
 }
 
 export async function updateUser(

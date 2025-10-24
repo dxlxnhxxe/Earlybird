@@ -66,6 +66,17 @@ export const usersColumns: ColumnDef<User>[] = [
     enableSorting: false,
   },
   {
+    accessorKey: 'codePin',
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title='Code PIN' />
+    ),
+    cell: ({ row }) => {
+      const codePin = row.getValue('codePin') as number | undefined
+      return <div>{codePin || '-'}</div>
+    },
+    enableSorting: false,
+  },
+  {
     accessorKey: 'status',
     header: ({ column }) => (
       <DataTableColumnHeader column={column} title='Status' />
