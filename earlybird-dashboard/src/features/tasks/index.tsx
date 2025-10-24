@@ -33,7 +33,7 @@ export function Tasks() {
               Here&apos;s a list of all clock entries (arrivals and departures).
             </p>
           </div>
-          <TasksPrimaryButtons />
+          <TasksPrimaryButtons clocks={clocks} />
         </div>
         {loading ? (
           <div className="flex justify-center items-center h-32"><Loader2 className='mr-2 h-4 w-4 animate-spin' />Loading clocks</div>
