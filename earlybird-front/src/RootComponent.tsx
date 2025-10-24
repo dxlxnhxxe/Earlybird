@@ -17,6 +17,7 @@ const RootComponent: React.FC = () => {
             <Routes>
                 <Route path="*" element={<NotFoundPage />} />
                 <Route path={ROUTES.KIOSK_INDEX_ROUTE} element={<Index />} />
+                <Route path={ROUTES.KIOSK_INDEX_BASE_ROUTE} element={<Index />} />
                 <Route path={ROUTES.KIOSK_LOGIN_ROUTE} element={<LoginPin />} />
                 <Route path={ROUTES.KIOSK_HOME_ROUTE} element={<KioskHomePage />} />
                 <Route path={ROUTES.HOMEPAGE_ROUTE} element={<HomePage />} />

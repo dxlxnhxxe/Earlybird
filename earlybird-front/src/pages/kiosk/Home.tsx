@@ -23,6 +23,16 @@ const KioskHomePage: React.FC = () => {
     const [timerInterval, setTimerInterval] = useState<NodeJS.Timeout | null>(null)
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState('')
+    const [userId, setUserId] = useState<string | null>(null)
+    const [teamId, setTeamId] = useState<string | null>(null)
+
+    // Get user and team info from localStorage
+    useEffect(() => {
+        const storedUserId = localStorage.getItem('kioskUserId')
+        const storedTeamId = localStorage.getItem('kioskTeamId')
+        if (storedUserId) setUserId(storedUserId)
+        if (storedTeamId) setTeamId(storedTeamId)
+    }, [])
 
     // On mount, check if already clocked in (persist timer in localStorage)
     useEffect(() => {
@@ -46,13 +56,17 @@ const KioskHomePage: React.FC = () => {
     }, [])
 
     const handleClockIn = async () => {
+        if (!userId || !teamId) {
+            setError('User or team information missing')
+            return
+        }
         setLoading(true)
         setError('')
         try {
             const res = await fetch('http://earlybird-api/clocks', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ user_id: 1, type: 'arrival' })
+                body: JSON.stringify({ user_id: parseInt(userId), team_id: parseInt(teamId), type: 'arrival' })
             })
             if (!res.ok) throw new Error('Failed to clock in')
             setPopupType('in')
@@ -83,13 +97,17 @@ const KioskHomePage: React.FC = () => {
 
     // Optionally, add a "Clock out" button to clear timer/localStorage
     const handleClockOut = async () => {
+        if (!userId || !teamId) {
+            setError('User or team information missing')
+            return
+        }
         setLoading(true)
         setError('')
         try {
             const res = await fetch('http://earlybird-api/clocks', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ user_id: 1, type: 'departure' })
+                body: JSON.stringify({ user_id: parseInt(userId), team_id: parseInt(teamId), type: 'departure' })
             })
             if (!res.ok) throw new Error('Failed to clock out')
             if (timerInterval) clearInterval(timerInterval)
@@ -112,7 +130,6 @@ const KioskHomePage: React.FC = () => {
                     <img src="/logoEarlybird.png" alt="EarlyBird Logo" />
                 </div>
                 <DateTime />
-                <div className="location">Epitech Paris, France</div>
             </div>
             <div className="main" style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh' }}>
                 <button
@@ -157,7 +174,6 @@ const KioskHomePage: React.FC = () => {
                     onClose={() => setShowPopup(false)}
                     icon={<img src="/checkmark-round.svg" alt="Checkmark" style={{ width: '2.5em', height: '2.5em' }} />}
                     title={popupType === 'in' ? 'Clocked in!' : popupType === 'out' ? 'Clocked out!' : ''}
-                    subtitle="Epitech Paris, France"
                     countdown={3}
                     countdownText="This screen will close in"
                     background={popupType === 'in' ? '#8fd16a' : popupType === 'out' ? '#e41212ff' : '#8fd16a'}

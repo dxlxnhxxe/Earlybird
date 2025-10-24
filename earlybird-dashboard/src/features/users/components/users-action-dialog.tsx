@@ -39,6 +39,10 @@ const formSchema = z
     }),
     password: z.string().transform((pwd) => pwd.trim()),
     role: z.string().min(1, 'Role is required.'),
+    codePin: z.string().optional().refine(
+      (val) => !val || /^\d{4,6}$/.test(val),
+      'Code PIN must be 4-6 digits'
+    ),
     confirmPassword: z.string().transform((pwd) => pwd.trim()),
     isEdit: z.boolean(),
   })
@@ -117,6 +121,7 @@ export function UsersActionDialog({
           ...currentRow,
           password: '',
           confirmPassword: '',
+          codePin: currentRow.codePin?.toString() || '',
           isEdit,
         }
       : {
@@ -128,6 +133,7 @@ export function UsersActionDialog({
           phoneNumber: '',
           password: '',
           confirmPassword: '',
+          codePin: '',
           isEdit,
         },
   })
@@ -143,6 +149,7 @@ export function UsersActionDialog({
         phone_number: values.phoneNumber,
         role: values.role,
         ...(values.password ? { password: values.password } : {}),
+        ...(values.codePin ? { code_pin: parseInt(values.codePin) } : {}),
       }
 
       if (isEdit && currentRow) {
@@ -286,6 +293,26 @@ export function UsersActionDialog({
                         value,
                       }))}
                     />
+                    <FormMessage className='col-span-4 col-start-3' />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name='codePin'
+                render={({ field }) => (
+                  <FormItem className='grid grid-cols-6 items-center space-y-0 gap-x-4 gap-y-1'>
+                    <FormLabel className='col-span-2 text-end'>
+                      Code PIN <span className='text-muted-foreground'>(optional)</span>
+                    </FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder='1234'
+                        className='col-span-4'
+                        autoComplete='off'
+                        {...field}
+                      />
+                    </FormControl>
                     <FormMessage className='col-span-4 col-start-3' />
                   </FormItem>
                 )}
