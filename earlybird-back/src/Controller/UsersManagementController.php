@@ -7,6 +7,7 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 use App\Entity\User;
+use App\Entity\TeamMember;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -111,13 +112,38 @@ class UsersManagementController extends AbstractController
      * @OA\Get(
      *     path="/users",
      *     summary="List all users",
+     *     @OA\Parameter(
+     *         name="team_id",
+     *         in="query",
+     *         description="Filter users by team ID",
+     *         required=false,
+     *         @OA\Schema(type="integer")
+     *     ),
      *     @OA\Response(response=200, description="List of users")
      * )
      */
     #[Route('/users', name: 'user_display', methods: ['GET'])]
-    public function displayUser(EntityManagerInterface $em): JsonResponse
+    public function displayUser(Request $request, EntityManagerInterface $em): JsonResponse
     {
-        $users = $em->getRepository(User::class)->findAll();
+        $teamId = $request->query->get('team_id');
+
+        if ($teamId) {
+            // Filter by team - get all team members for this team and their users
+            $teamMembers = $em->getRepository(TeamMember::class)->findBy(['team' => $teamId]);
+            $userIds = array_map(function($teamMember) {
+                return $teamMember->getUser()->getId();
+            }, $teamMembers);
+
+            if (empty($userIds)) {
+                return new JsonResponse([], 200);
+            }
+
+            $users = $em->getRepository(User::class)->findBy(['id' => $userIds]);
+        } else {
+            // Get all users (admin view)
+            $users = $em->getRepository(User::class)->findAll();
+        }
+
         $data = array_map(function ($user) {
             return [
                 'id' => $user->getId(),

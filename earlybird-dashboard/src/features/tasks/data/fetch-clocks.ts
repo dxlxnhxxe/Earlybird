@@ -15,9 +15,10 @@ export type ApiClock = {
   }
 }
 
-export async function fetchClocks(): Promise<ApiClock[]> {
+export async function fetchClocks(teamId?: number): Promise<ApiClock[]> {
   const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://earlybird-api'
-  const res = await fetch(`${baseUrl}/clocks/all`)
+  const url = teamId ? `${baseUrl}/clocks/all?team_id=${teamId}` : `${baseUrl}/clocks/all`
+  const res = await fetch(url)
   if (!res.ok) throw new Error('Failed to fetch clocks')
   const data = await res.json()
   return data.clocks || []

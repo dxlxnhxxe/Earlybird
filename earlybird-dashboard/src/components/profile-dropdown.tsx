@@ -11,11 +11,17 @@ import {
   DropdownMenuSeparator,
   DropdownMenuShortcut,
   DropdownMenuTrigger,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
 } from '@/components/ui/dropdown-menu'
 import { SignOutDialog } from '@/components/sign-out-dialog'
+import { useTeamStore } from '@/stores/team-store'
+import { Check, ChevronsUpDown } from 'lucide-react'
 
 export function ProfileDropdown() {
   const [open, setOpen] = useDialogState()
+  const { selectedTeam, availableTeams, setSelectedTeam, isAdminTeam } = useTeamStore()
 
   return (
     <>
@@ -39,6 +45,26 @@ export function ProfileDropdown() {
           </DropdownMenuLabel>
           <DropdownMenuSeparator />
           <DropdownMenuGroup>
+            <DropdownMenuSub>
+              <DropdownMenuSubTrigger>
+                <span>Team: {selectedTeam?.name || 'None'}</span>
+                <ChevronsUpDown className='ml-auto h-4 w-4' />
+              </DropdownMenuSubTrigger>
+              <DropdownMenuSubContent>
+                {availableTeams.map((team) => (
+                  <DropdownMenuItem
+                    key={team.id}
+                    onClick={() => setSelectedTeam(team)}
+                    className='flex items-center justify-between'
+                  >
+                    <span>{team.name}</span>
+                    {selectedTeam?.id === team.id && (
+                      <Check className='h-4 w-4' />
+                    )}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuSubContent>
+            </DropdownMenuSub>
             <DropdownMenuItem asChild>
               <Link to='/settings'>
                 Profile
@@ -57,7 +83,14 @@ export function ProfileDropdown() {
                 <DropdownMenuShortcut>⌘S</DropdownMenuShortcut>
               </Link>
             </DropdownMenuItem>
-            <DropdownMenuItem>New Team</DropdownMenuItem>
+            {isAdminTeam && (
+              <DropdownMenuItem asChild>
+                <Link to='/teams'>
+                  Teams
+                  <DropdownMenuShortcut>⇧⌘T</DropdownMenuShortcut>
+                </Link>
+              </DropdownMenuItem>
+            )}
           </DropdownMenuGroup>
           <DropdownMenuSeparator />
           <DropdownMenuItem variant='destructive' onClick={() => setOpen(true)}>

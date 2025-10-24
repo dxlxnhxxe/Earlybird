@@ -106,19 +106,46 @@ class ClockController extends AbstractController
      * @OA\Get(
      *     path="/clocks/all",
      *     summary="Get all clock entries",
+     *     @OA\Parameter(
+     *         name="team_id",
+     *         in="query",
+     *         description="Filter clocks by team ID",
+     *         required=false,
+     *         @OA\Schema(type="integer")
+     *     ),
      *     @OA\Response(response=200, description="List of all clocks")
      * )
      */
     #[Route('/clocks/all', name: 'clocks_all', methods: ['GET'])]
-    public function getAllClocks(EntityManagerInterface $em): JsonResponse
+    public function getAllClocks(Request $request, EntityManagerInterface $em): JsonResponse
     {
-        $clocks = $em->getRepository(Clock::class)->findBy([], ['timestamp' => 'DESC']);
-        
+        $teamId = $request->query->get('team_id');
+
+        if ($teamId) {
+            // Filter by team - get all team members for this team and their clocks
+            $teamMembers = $em->getRepository(TeamMember::class)->findBy(['team' => $teamId]);
+            $teamMemberIds = array_map(function($teamMember) {
+                return $teamMember->getId();
+            }, $teamMembers);
+
+            if (empty($teamMemberIds)) {
+                return new JsonResponse(['clocks' => []], 200);
+            }
+
+            $clocks = $em->getRepository(Clock::class)->findBy(
+                ['teamMember' => $teamMemberIds],
+                ['timestamp' => 'DESC']
+            );
+        } else {
+            // Get all clocks (admin view)
+            $clocks = $em->getRepository(Clock::class)->findBy([], ['timestamp' => 'DESC']);
+        }
+
         $data = array_map(function (Clock $clock) {
             $teamMember = $clock->getTeamMember();
             $user = $teamMember->getUser();
             $team = $teamMember->getTeam();
-            
+
             return [
                 'id' => $clock->getId(),
                 'timestamp' => $clock->getTimestamp()->format('d-m-Y H:i:s'),
@@ -135,7 +162,7 @@ class ClockController extends AbstractController
                 ],
             ];
         }, $clocks);
-        
+
         return new JsonResponse(['clocks' => $data], 200);
     }
 
