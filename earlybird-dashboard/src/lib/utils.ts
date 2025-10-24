@@ -10,6 +10,60 @@ export function sleep(ms: number = 1000) {
 }
 
 /**
+ * Exports data to CSV format and triggers download
+ * @param data - Array of objects to export
+ * @param filename - Name of the downloaded file (without .csv extension)
+ */
+export function exportToCSV<T extends Record<string, any>>(
+  data: T[],
+  filename: string = 'export'
+) {
+  if (!data || data.length === 0) {
+    console.warn('No data to export')
+    return
+  }
+
+  // Get all unique keys from the data
+  const headers = Array.from(
+    new Set(data.flatMap(item => Object.keys(item)))
+  )
+
+  // Create CSV content
+  const csvContent = [
+    // Header row
+    headers.join(','),
+    // Data rows
+    ...data.map(row =>
+      headers.map(header => {
+        const value = row[header]
+        // Handle nested objects by converting to string
+        if (typeof value === 'object' && value !== null) {
+          return `"${JSON.stringify(value).replace(/"/g, '""')}"`
+        }
+        // Escape quotes and wrap in quotes if contains comma, quote, or newline
+        const stringValue = String(value ?? '')
+        if (stringValue.includes(',') || stringValue.includes('"') || stringValue.includes('\n')) {
+          return `"${stringValue.replace(/"/g, '""')}"`
+        }
+        return stringValue
+      }).join(',')
+    )
+  ].join('\n')
+
+  // Create and trigger download
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+  const link = document.createElement('a')
+  const url = URL.createObjectURL(blob)
+  link.setAttribute('href', url)
+  link.setAttribute('download', `${filename}.csv`)
+  link.style.visibility = 'hidden'
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+  URL.revokeObjectURL(url)
+}
+
+/**
  * Generates page numbers for pagination with ellipsis
  * @param currentPage - Current page number (1-based)
  * @param totalPages - Total number of pages
