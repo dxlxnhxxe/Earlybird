@@ -3,7 +3,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { fetchUsers } from './fetch-users'
 import type { User } from './schema'
 
-export function useUsers() {
+export function useUsers(teamId?: number) {
   const [users, setUsers] = useState<User[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -11,7 +11,7 @@ export function useUsers() {
   const refetch = useCallback(() => {
     setLoading(true)
     setError(null)
-    fetchUsers()
+    fetchUsers(teamId)
       .then((apiUsers) => {
         const mapped = apiUsers.map((u) => ({
           id: String(u.id),
@@ -29,7 +29,7 @@ export function useUsers() {
       })
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false))
-  }, [])
+  }, [teamId])
 
   useEffect(() => {
     refetch()

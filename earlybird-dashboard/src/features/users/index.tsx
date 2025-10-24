@@ -10,6 +10,7 @@ import { UsersPrimaryButtons } from './components/users-primary-buttons'
 import { UsersProvider } from './components/users-provider'
 import { UsersTable } from './components/users-table'
 import { useUsers } from './data/users'
+import { useTeamStore } from '@/stores/team-store'
 import { Loader2 } from 'lucide-react'
 
 const route = getRouteApi('/_authenticated/users/')
@@ -17,7 +18,9 @@ const route = getRouteApi('/_authenticated/users/')
 export function Users() {
   const search = route.useSearch()
   const navigate = route.useNavigate()
-  const { users, loading, error, refetch } = useUsers()
+  const { selectedTeam, isAdminTeam } = useTeamStore()
+  const teamId = isAdminTeam ? undefined : selectedTeam?.id
+  const { users, loading, error, refetch } = useUsers(teamId)
 
   return (
     <UsersProvider refetch={refetch}>
@@ -36,6 +39,16 @@ export function Users() {
             <h2 className='text-2xl font-bold tracking-tight'>User List</h2>
             <p className='text-muted-foreground'>
               Manage your users and their roles here.
+              {selectedTeam && !isAdminTeam && (
+                <span className='block text-sm font-medium text-primary'>
+                  Showing users from: {selectedTeam.name}
+                </span>
+              )}
+              {isAdminTeam && (
+                <span className='block text-sm font-medium text-primary'>
+                  Admin view: Showing all users
+                </span>
+              )}
             </p>
           </div>
           <UsersPrimaryButtons />

@@ -27,6 +27,7 @@ import { createClock, updateClock } from '../data/fetch-clocks'
 import { fetchUsers, type ApiUser } from '@/features/users/data/fetch-users'
 import { fetchTeams, type ApiTeam } from '../data/fetch-teams'
 import { useTasks } from './tasks-provider'
+import { useTeamStore } from '@/stores/team-store'
 import { toast } from 'sonner'
 import { Loader2 } from 'lucide-react'
 
@@ -50,6 +51,7 @@ export function TasksMutateDrawer({
 }: TaskMutateDrawerProps) {
   const isUpdate = !!currentRow
   const { refetch } = useTasks()
+  const { selectedTeam, isAdminTeam } = useTeamStore()
   const [isLoading, setIsLoading] = useState(false)
   const [users, setUsers] = useState<ApiUser[]>([])
   const [teams, setTeams] = useState<ApiTeam[]>([])
@@ -63,14 +65,26 @@ export function TasksMutateDrawer({
           team_id: currentRow.team.id,
           type: currentRow.type,
         }
-      : undefined,
+      : {
+          team_id: selectedTeam?.id || 0,
+        },
   })
+
+  // Set default team value when not admin
+  useEffect(() => {
+    if (!isAdminTeam && selectedTeam && !isUpdate) {
+      form.setValue('team_id', selectedTeam.id)
+    }
+  }, [selectedTeam, isAdminTeam, isUpdate, form])
 
   // Load users and teams
   useEffect(() => {
     if (open) {
       setLoadingData(true)
-      Promise.all([fetchUsers(), fetchTeams()])
+      Promise.all([
+        fetchUsers(isAdminTeam ? undefined : selectedTeam?.id),
+        fetchTeams()
+      ])
         .then(([usersData, teamsData]) => {
           setUsers(usersData)
           setTeams(teamsData)
@@ -82,7 +96,7 @@ export function TasksMutateDrawer({
           setLoadingData(false)
         })
     }
-  }, [open])
+  }, [open, selectedTeam?.id, isAdminTeam])
 
   const onSubmit = async (data: ClockForm) => {
     setIsLoading(true)
@@ -171,7 +185,7 @@ export function TasksMutateDrawer({
                         defaultValue={field.value > 0 ? field.value.toString() : undefined}
                         onValueChange={(v) => field.onChange(parseInt(v))}
                         placeholder='Select a team'
-                        disabled={isUpdate}
+                        disabled={isUpdate || !isAdminTeam}
                         items={teams.map((team) => ({
                           label: team.name,
                           value: team.id.toString(),
