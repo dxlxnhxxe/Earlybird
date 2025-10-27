@@ -73,5 +73,14 @@ services:
       - dashboard
     restart: unless-stopped
 
+  announce:
+    # One-shot helper that prints the accessible routes after services start
+    image: alpine:3.19
+    container_name: announce
+    depends_on:
+      - reverse-proxy
+    command: ["sh", "-c", "printf '%s\n' '========================================' 'Docker containers started — accessible routes:' '' '  - Frontend:  http://earlybird-front' '  - Dashboard: http://earlybird-dashboard' '  - API:       http://earlybird-api' '  - Health:    http://localhost/health' '' 'If the hostnames above do not resolve, ensure you have added these lines to your hosts file:' '  127.0.0.1 earlybird-front' '  127.0.0.1 earlybird-dashboard' '  127.0.0.1 earlybird-api' '========================================' && sleep 2"]
+    restart: "no"
+
 volumes:
   db_data:
