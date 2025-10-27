@@ -1,4 +1,6 @@
 {
+    "name": "earlybird/backend",
+    "description": "EarlyBird time-tracking application backend API",
     "type": "project",
     "license": "proprietary",
     "minimum-stability": "stable",
@@ -11,8 +13,8 @@
         "doctrine/doctrine-bundle": "^2.17",
         "doctrine/doctrine-migrations-bundle": "^3.4",
         "doctrine/orm": "^3.5",
-        "gesdinet/jwt-refresh-token-bundle": "*",
-        "lexik/jwt-authentication-bundle": "*",
+        "gesdinet/jwt-refresh-token-bundle": "^1.0",
+        "lexik/jwt-authentication-bundle": "^3.0",
         "nelmio/api-doc-bundle": "^5.6",
         "nelmio/cors-bundle": "^2.5",
         "symfony/asset": "7.3.*",
