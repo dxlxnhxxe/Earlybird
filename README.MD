@@ -15,9 +15,11 @@
 ## 🚀 Getting Started
 
 ### Prerequisites
-- **Frontend:** Node.js (for React)
-- **Backend:** PHP 7.4+ (with Composer)
-- **Database:** (We don't know yet)
+- Docker Desktop (recommended)
+- Or, manually:
+   - Frontend: Node.js (for React/Vite)
+   - Backend: PHP 8.2+ (with Composer)
+   - Database: PostgreSQL 16
 
 ---
 
@@ -38,9 +40,9 @@
    ```
 
 #### Backend (PHP)
-1. Navigate to the `earlybird-backend` directory:
+1. Navigate to the `app` directory:
    ```bash
-   cd earlybird-backend
+   cd app
    ```
 2. Install PHP dependencies:
    ```bash
@@ -53,6 +55,63 @@
    ```
 
 ---
+
+### Run everything with Docker
+
+**Step 1: Configure local DNS**
+
+**Option A - Automatic (Recommended):**
+
+Run the setup script for your OS:
+- **Windows**: Right-click PowerShell → "Run as Administrator" → `.\setup-hosts.ps1`
+- **Linux/Mac**: `sudo ./setup-hosts.sh`
+
+**Option B - Manual:**
+
+Add these lines to your hosts file:
+- **Windows**: `C:\Windows\System32\drivers\etc\hosts` (run as Administrator)
+- **Linux/Mac**: `/etc/hosts`
+
+```
+127.0.0.1 earlybird-front
+127.0.0.1 earlybird-dashboard
+127.0.0.1 earlybird-api
+```
+
+**Step 2: Start the services**
+
+From the repository root:
+
+```bash
+docker compose up --build
+```
+
+**Step 3: Access the application**
+
+- **Main Application:** http://earlybird-front (Frontend)
+- **Dashboard:** http://earlybird-dashboard (Manager Dashboard)
+- **API:** http://earlybird-api (Backend API)
+- **Health Check:** http://localhost/health
+
+The reverse proxy uses subdomain-based virtual hosts on port 80:
+- `earlybird-front` → Frontend (React)
+- `earlybird-dashboard` → Manager Dashboard (React)
+- `earlybird-api` → Backend API (Symfony)
+
+**Architecture:**
+```
+Port 80 (Reverse Proxy - Virtual Hosts)
+    ├── earlybird-api       → Backend (Symfony, internal port 8000)
+    ├── earlybird-dashboard → Dashboard (React, internal port 5173)
+    ├── earlybird-front     → Frontend (React, internal port 3000)
+    └── localhost           → Health check & redirect
+```
+
+**Database:** PostgreSQL (internal access only, not exposed externally)
+- Default credentials: symfony/symfony
+- Database name: "database"
+
+For more details about the reverse proxy configuration, see [reverse-proxy/README.md](reverse-proxy/README.md).
 
 ## 📝 Usage
 1. **Create a Project:** Add a project or task in the dashboard.
