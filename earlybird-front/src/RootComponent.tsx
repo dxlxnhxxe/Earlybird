@@ -7,7 +7,9 @@ import './styles/main.sass'
 import Index from './pages/kiosk/Index'
 import NotFoundPage from './pages/NotFoundPage'
 import LoginPin from './pages/kiosk/Login'
-import HomePage from './pages/kiosk/Home'
+import KioskHomePage from './pages/kiosk/Home'
+import HomePage from './pages/Home'
+import DashboardIndex from './pages/dashboard/Index'
 
 const RootComponent: React.FC = () => {
     return (
@@ -15,8 +17,11 @@ const RootComponent: React.FC = () => {
             <Routes>
                 <Route path="*" element={<NotFoundPage />} />
                 <Route path={ROUTES.KIOSK_INDEX_ROUTE} element={<Index />} />
+                <Route path={ROUTES.KIOSK_INDEX_BASE_ROUTE} element={<Index />} />
                 <Route path={ROUTES.KIOSK_LOGIN_ROUTE} element={<LoginPin />} />
-                <Route path={ROUTES.KIOSK_HOME_ROUTE} element={<HomePage />} />
+                <Route path={ROUTES.KIOSK_HOME_ROUTE} element={<KioskHomePage />} />
+                <Route path={ROUTES.HOMEPAGE_ROUTE} element={<HomePage />} />
+                <Route path={ROUTES.DASHBOARD_ROUTE} element={<DashboardIndex />} />
             </Routes>
         </Router>
     )
