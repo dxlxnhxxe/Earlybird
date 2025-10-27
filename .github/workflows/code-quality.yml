@@ -1,0 +1,115 @@
+name: Code Quality
+
+on:
+  push:
+    branches: [ "main", "develop", "EB-*" ]
+  pull_request:
+    branches: [ "main", "develop" ]
+  workflow_dispatch:
+
+jobs:
+  eslint-frontend:
+    name: ESLint Analysis
+    runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        project: [earlybird-front, earlybird-dashboard]
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: ${{ matrix.project }}/package-lock.json
+      
+      - name: Install dependencies
+        working-directory: ./${{ matrix.project }}
+        run: npm ci
+      
+      - name: Run ESLint
+        working-directory: ./${{ matrix.project }}
+        run: npm run lint
+        continue-on-error: true
+
+  prettier-check:
+    name: Prettier Format Check
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      
+      - name: Check Frontend formatting
+        working-directory: ./earlybird-front
+        run: |
+          npm ci
+          npm run format
+        continue-on-error: true
+      
+      - name: Check Dashboard formatting
+        working-directory: ./earlybird-dashboard
+        run: |
+          npm ci
+          npm run format:check
+        continue-on-error: true
+
+  symfony-code-quality:
+    name: Symfony Code Quality
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          tools: composer:v2, php-cs-fixer, phpstan
+      
+      - name: Install dependencies
+        working-directory: ./earlybird-back
+        run: composer install --prefer-dist --no-progress
+      
+      - name: Check PHP syntax
+        working-directory: ./earlybird-back
+        run: find src -name "*.php" -exec php -l {} \;
+      
+      - name: Run PHP CS Fixer (dry-run)
+        working-directory: ./earlybird-back
+        run: |
+          composer require --dev friendsofphp/php-cs-fixer || true
+          vendor/bin/php-cs-fixer fix --dry-run --diff src/ || true
+        continue-on-error: true
+
+  typescript-check:
+    name: TypeScript Type Check
+    runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        project: [earlybird-front, earlybird-dashboard]
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      
+      - name: Install dependencies
+        working-directory: ./${{ matrix.project }}
+        run: npm ci
+      
+      - name: Run TypeScript compiler check
+        working-directory: ./${{ matrix.project }}
+        run: npx tsc --noEmit
+        continue-on-error: true
