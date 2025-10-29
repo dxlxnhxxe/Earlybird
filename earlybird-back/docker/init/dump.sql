@@ -103,3 +103,23 @@ CREATE TABLE IF NOT EXISTS clock (
     end_time TIME
 );
 -- ✅ Données d’exemple pour la table clock
+
+-- Bob Martin (user_id = 2, team_member_id = 2)
+INSERT INTO clock (timestamp, type, team_member_id) VALUES
+                                                        ('2025-10-01 08:00:00', 'in', 2),
+                                                        ('2025-10-02 08:05:00', 'in', 2),
+                                                        ('2025-10-03 08:10:00', 'in', 2),
+                                                        ('2025-10-06 08:00:00', 'in', 2),
+                                                        ('2025-10-07 08:03:00', 'in', 2),
+                                                        ('2025-10-08 08:15:00', 'in', 2),
+                                                        ('2025-10-09 08:00:00', 'in', 2);
+
+-- Clara Admin (user_id = 3, team_member_id = 3)
+INSERT INTO clock (timestamp, type, team_member_id) VALUES
+                                                        ('2025-10-01 08:05:00', 'in', 3),
+                                                        ('2025-10-02 08:10:00', 'in', 3),
+                                                        ('2025-10-03 08:00:00', 'in', 3),
+                                                        ('2025-10-06 08:15:00', 'in', 3),
+                                                        ('2025-10-07 08:05:00', 'in', 3),
+                                                        ('2025-10-08 08:00:00', 'in', 3),
+                                                        ('2025-10-09 08:12:00', 'in', 3);
