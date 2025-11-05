@@ -95,9 +95,75 @@ class ClockController extends AbstractController
                 'user' => $user->getFirstname() . ' ' . $user->getLastname(),
                 'team' => $team->getName(),
                 'type' => $clock->getType(),
-                'timestamp' => $clock->getTimestamp()->format('Y-m-d H:i:s')
+                'timestamp' => $clock->getTimestamp()->format('d-m-Y H:i:s')
             ]
         ], 201);
+    }
+
+    /**
+     * Get all clocks
+     *
+     * @OA\Get(
+     *     path="/clocks/all",
+     *     summary="Get all clock entries",
+     *     @OA\Parameter(
+     *         name="team_id",
+     *         in="query",
+     *         description="Filter clocks by team ID",
+     *         required=false,
+     *         @OA\Schema(type="integer")
+     *     ),
+     *     @OA\Response(response=200, description="List of all clocks")
+     * )
+     */
+    #[Route('/clocks/all', name: 'clocks_all', methods: ['GET'])]
+    public function getAllClocks(Request $request, EntityManagerInterface $em): JsonResponse
+    {
+        $teamId = $request->query->get('team_id');
+
+        if ($teamId) {
+            // Filter by team - get all team members for this team and their clocks
+            $teamMembers = $em->getRepository(TeamMember::class)->findBy(['team' => $teamId]);
+            $teamMemberIds = array_map(function($teamMember) {
+                return $teamMember->getId();
+            }, $teamMembers);
+
+            if (empty($teamMemberIds)) {
+                return new JsonResponse(['clocks' => []], 200);
+            }
+
+            $clocks = $em->getRepository(Clock::class)->findBy(
+                ['teamMember' => $teamMemberIds],
+                ['timestamp' => 'DESC']
+            );
+        } else {
+            // Get all clocks (admin view)
+            $clocks = $em->getRepository(Clock::class)->findBy([], ['timestamp' => 'DESC']);
+        }
+
+        $data = array_map(function (Clock $clock) {
+            $teamMember = $clock->getTeamMember();
+            $user = $teamMember->getUser();
+            $team = $teamMember->getTeam();
+
+            return [
+                'id' => $clock->getId(),
+                'timestamp' => $clock->getTimestamp()->format('d-m-Y H:i:s'),
+                'type' => $clock->getType(),
+                'user' => [
+                    'id' => $user->getId(),
+                    'firstname' => $user->getFirstname(),
+                    'lastname' => $user->getLastname(),
+                    'email' => $user->getEmail(),
+                ],
+                'team' => [
+                    'id' => $team->getId(),
+                    'name' => $team->getName(),
+                ],
+            ];
+        }, $clocks);
+
+        return new JsonResponse(['clocks' => $data], 200);
     }
 
     // ✅ GET /clocks?user_id=...&team_id=...
@@ -125,7 +191,7 @@ class ClockController extends AbstractController
         $data = array_map(function (Clock $clock) use ($team) {
             return [
                 'id' => $clock->getId(),
-                'timestamp' => $clock->getTimestamp()->format('Y-m-d H:i:s'),
+                'timestamp' => $clock->getTimestamp()->format('d-m-Y H:i:s'),
                 'type' => $clock->getType(),
                 'team' => $team->getName(),
             ];
@@ -172,7 +238,7 @@ class ClockController extends AbstractController
             $clock->setType($data['type']);
         }
         if (isset($data['timestamp'])) {
-            $dt = \DateTime::createFromFormat('Y-m-d H:i:s', $data['timestamp']);
+            $dt = \DateTime::createFromFormat('d-m-Y H:i:s', $data['timestamp']);
             if ($dt) {
                 $clock->setTimestamp($dt);
             }

@@ -2,11 +2,12 @@
 
 namespace App\Entity;
 
+use App\Repository\TeamMemberRepository;
 use Doctrine\ORM\Mapping as ORM;
 use App\Entity\Team;
 use App\Entity\User;
 
-#[ORM\Entity]
+#[ORM\Entity(repositoryClass: TeamMemberRepository::class)]
 #[ORM\Table(name: 'team_member')]
 class TeamMember
 {
@@ -16,23 +17,28 @@ class TeamMember
     #[ORM\Column(type: 'integer')]
     private ?int $id = null;
 
-    #[ORM\ManyToOne(targetEntity: Team::class, inversedBy: 'memberships')]
-    #[ORM\JoinColumn(name: 'team_id', referencedColumnName: 'id', onDelete: 'CASCADE', nullable: false)]
+    // Relation ManyToOne vers Team (une équipe peut avoir plusieurs membres)
+    #[ORM\ManyToOne(targetEntity: Team::class, inversedBy: 'memberships', cascade: ['persist'])]
+    #[ORM\JoinColumn(name: 'team_id', referencedColumnName: 'id', nullable: false, onDelete: 'CASCADE')]
     private ?Team $team = null;
 
-    #[ORM\ManyToOne(targetEntity: User::class)]
-    #[ORM\JoinColumn(name: 'user_id', referencedColumnName: 'id', onDelete: 'CASCADE', nullable: false)]
+    // Relation ManyToOne vers User (un user peut être dans plusieurs équipes)
+    #[ORM\ManyToOne(targetEntity: User::class, cascade: ['persist'])]
+    #[ORM\JoinColumn(name: 'user_id', referencedColumnName: 'id', nullable: false, onDelete: 'CASCADE')]
     private ?User $user = null;
-    public function getId(): ?int
-    {
-        return $this->id;
-    }
 
     #[ORM\Column(type: 'time', nullable: true)]
     private ?\DateTimeInterface $startTime = null;
 
     #[ORM\Column(type: 'time', nullable: true)]
     private ?\DateTimeInterface $endTime = null;
+
+    // === Getters / Setters ===
+
+    public function getId(): ?int
+    {
+        return $this->id;
+    }
 
     public function getTeam(): ?Team
     {
@@ -76,5 +82,15 @@ class TeamMember
     {
         $this->endTime = $endTime;
         return $this;
+    }
+
+    // Pour le débogage (utile en cas d’erreur Doctrine)
+    public function __toString(): string
+    {
+        return sprintf('TeamMember #%d (User ID: %d, Team ID: %d)',
+            $this->id ?? 0,
+            $this->user?->getId() ?? 0,
+            $this->team?->getId() ?? 0
+        );
     }
 }

@@ -206,15 +206,42 @@ class TeamsManagementController extends AbstractController
         }
 
         if (isset($data['members']) && is_array($data['members'])) {
-            // Remove all existing memberships
+            // Get current member IDs
+            $currentMemberIds = array_map(
+                function($membership) {
+                    return $membership->getUser()->getId();
+                },
+                $team->getMemberships()->toArray()
+            );
+            
+            // Get new member IDs
+            $newMemberIds = array_map(
+                function($memberData) {
+                    return $memberData['user_id'] ?? null;
+                },
+                $data['members']
+            );
+            
+            // Remove members that are no longer in the team
             foreach ($team->getMemberships() as $existingMembership) {
-                $em->remove($existingMembership);
+                if (!in_array($existingMembership->getUser()->getId(), $newMemberIds)) {
+                    $em->remove($existingMembership);
+                }
             }
-            // Add new memberships
+            
+            // Add or update members
             foreach ($data['members'] as $memberData) {
                 if (!isset($memberData['user_id'])) continue;
                 $user = $em->getRepository(User::class)->find($memberData['user_id']);
-                if ($user) {
+                if (!$user) continue;
+                
+                // Check if member already exists
+                $existingMembership = $em->getRepository(TeamMember::class)->findOneBy([
+                    'team' => $team,
+                    'user' => $user
+                ]);
+                
+                if (!$existingMembership) {
                     $teamMember = new TeamMember();
                     $teamMember->setTeam($team);
                     $teamMember->setUser($user);
@@ -226,6 +253,14 @@ class TeamsManagementController extends AbstractController
                     }
                     $team->addMembership($teamMember);
                     $em->persist($teamMember);
+                } else {
+                    // Update existing membership if needed
+                    if (isset($memberData['start_time'])) {
+                        $existingMembership->setStartTime(\DateTime::createFromFormat('H:i', $memberData['start_time']));
+                    }
+                    if (isset($memberData['end_time'])) {
+                        $existingMembership->setEndTime(\DateTime::createFromFormat('H:i', $memberData['end_time']));
+                    }
                 }
             }
         }

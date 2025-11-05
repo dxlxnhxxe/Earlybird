@@ -1,6 +1,7 @@
 services:
   database:
     image: postgres:${POSTGRES_VERSION:-16}-alpine
+    container_name: database
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-database}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-symfony}
@@ -13,18 +14,20 @@ services:
     volumes:
       - db_data:/var/lib/postgresql/data:rw
       - ./earlybird-back/docker/init/dump.sql:/docker-entrypoint-initdb.d/dump.sql:ro
-    ports:
-      - "5432:5432"
+    # Database port only exposed internally to other containers
+    expose:
+      - "5432"
 
   backend:
     build:
       context: ./earlybird-back
-    container_name: symfony_app
+    container_name: backend
     working_dir: /earlybird-back
     volumes:
       - ./earlybird-back:/earlybird-back
-    ports:
-      - "8080:8000"
+    # Backend port only exposed internally to reverse proxy
+    expose:
+      - "8000"
     depends_on:
       database:
         condition: service_healthy
@@ -35,12 +38,49 @@ services:
   frontend:
     build:
       context: ./earlybird-front
+    container_name: frontend
     environment:
       NODE_ENV: production
-    ports:
-      - "3000:3000"
+    # Frontend port only exposed internally to reverse proxy
+    expose:
+      - "3000"
     depends_on:
       - backend
+
+  dashboard:
+    build:
+      context: ./earlybird-dashboard
+    container_name: dashboard
+    # Dashboard port only exposed internally to reverse proxy
+    expose:
+      - "5173"
+    depends_on:
+      - backend
+    environment:
+      # Updated to use reverse proxy API path
+      - VITE_API_BASE_URL=http://earlybird-api
+
+  reverse-proxy:
+    build:
+      context: ./reverse-proxy
+    container_name: reverse-proxy
+    ports:
+      # Single entry point on port 80
+      - "80:80"
+    depends_on:
+      - backend
+      - frontend
+      - dashboard
+    restart: unless-stopped
+
+  announce:
+    # One-shot helper that prints the accessible routes after services start
+    image: alpine:3.19
+    container_name: announce
+    depends_on:
+      - reverse-proxy
+    command: ["sh", "-c", "printf '%s\n' '========================================' 'Docker containers started — accessible routes:' '' '  - Frontend:  http://earlybird-front' '  - Dashboard: http://earlybird-dashboard' '  - API:       http://earlybird-api' '  - Health:    http://localhost/health' '' 'If the hostnames above do not resolve, ensure you have added these lines to your hosts file:' '  127.0.0.1 earlybird-front' '  127.0.0.1 earlybird-dashboard' '  127.0.0.1 earlybird-api' '========================================' && sleep 2"]
+    restart: "no"
 
 volumes:
   db_data:
