@@ -1,21 +1,48 @@
 import React, { useEffect, useState } from 'react'
 import DateTime from '../../components/DateTime'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import Spinner from '../../components/Spinner'
 import '../../styles/kiosk_index.sass'
 
 const IndexPage: React.FC = () => {
     const navigate = useNavigate()
+    const { teamId } = useParams<{ teamId: string }>()
     const [users, setUsers] = useState([])
+    const [team, setTeam] = useState<any>(null)
     const [loading, setLoading] = useState(true)
 
     useEffect(() => {
-        fetch('http://localhost:8080/users')
-            .then((res) => res.json())
-            .then((data) => setUsers(data))
-            .catch((err) => console.error('Failed to fetch users:', err))
-            .finally(() => setLoading(false))
-    }, [])
+        const fetchData = async () => {
+            try {
+                // If teamId is provided, fetch team details and its members
+                if (teamId) {
+                    const teamResponse = await fetch(`http://earlybird-api/teams/${teamId}`)
+                    if (teamResponse.ok) {
+                        const teamData = await teamResponse.json()
+                        setTeam(teamData)
+                        setUsers(teamData.members || [])
+                    } else {
+                        console.error('Failed to fetch team:', teamResponse.statusText)
+                        // Fallback to all users if team not found
+                        const usersResponse = await fetch('http://earlybird-api/users')
+                        const usersData = await usersResponse.json()
+                        setUsers(usersData)
+                    }
+                } else {
+                    // If no teamId, fetch all users
+                    const usersResponse = await fetch('http://earlybird-api/users')
+                    const usersData = await usersResponse.json()
+                    setUsers(usersData)
+                }
+            } catch (err) {
+                console.error('Failed to fetch data:', err)
+            } finally {
+                setLoading(false)
+            }
+        }
+
+        fetchData()
+    }, [teamId])
 
     return (
         <div className="app">
@@ -24,7 +51,7 @@ const IndexPage: React.FC = () => {
                     <img src="/logoEarlybird.png" alt="EarlyBird Logo" />
                 </div>
                 <DateTime />
-                <div className="location">Epitech Paris, France</div>
+                {team && <div className="team-name">{team.name}</div>}
             </div>
             <div className="main">
                 <div className="search-bar">
@@ -43,7 +70,7 @@ const IndexPage: React.FC = () => {
                 ) : (
                     <div className="user-list">
                         {users.map((user: any) => (
-                            <div key={user.id} className="user-item" style={{ cursor: 'pointer' }} onClick={() => navigate(`/kiosk/login?userId=${user.id}`)}>
+                            <div key={user.id} className="user-item" style={{ cursor: 'pointer' }} onClick={() => navigate(`/kiosk/login?userId=${user.id}${teamId ? `&teamId=${teamId}` : ''}`)}>
                                 <img
                                     src={`https://api.dicebear.com/9.x/thumbs/svg?seed=${encodeURIComponent(user.firstname + ' ' + user.lastname)}&scale=80&backgroundColor=transparent`}
                                     alt={user.firstname + ' ' + user.lastname}

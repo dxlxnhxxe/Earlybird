@@ -19,13 +19,14 @@ const LoginPin = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const userId = searchParams.get('userId');
+  const teamId = searchParams.get('teamId');
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [pin, setPin] = useState(['', '', '', '']);
   const [error, setError] = useState('');
 
   useEffect(() => {
-    fetch('http://localhost:8080/users')
+    fetch('http://earlybird-api/users')
       .then(res => res.json())
       .then(data => {
         setUsers(data);
@@ -48,6 +49,9 @@ const LoginPin = () => {
         // Check PIN
         const enteredPin = newPin.join('');
         if (user && String(user.code_pin).padStart(4, '0') === enteredPin) {
+          // Store user and team info for the home page
+          localStorage.setItem('kioskUserId', userId || '');
+          localStorage.setItem('kioskTeamId', teamId || '');
           navigate('/kiosk/home');
         } else {
           setError('Incorrect PIN');
@@ -83,7 +87,6 @@ const LoginPin = () => {
       <div className="sidebar">
         <div className="logo"><img src="/logoEarlybird.png" alt="EarlyBird Logo" /></div>
         <DateTime />
-        <div className="location">Epitech Paris, France</div>
       </div>
       <div className="main" style={{ position: 'relative' }}>
         <button

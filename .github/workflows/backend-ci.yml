@@ -1,0 +1,77 @@
+name: Backend CI
+
+on:
+  push:
+    branches: [ "main", "develop", "EB-*" ]
+    paths:
+      - 'earlybird-back/**'
+      - '.github/workflows/backend-ci.yml'
+  pull_request:
+    branches: [ "main", "develop" ]
+    paths:
+      - 'earlybird-back/**'
+
+jobs:
+  test-backend:
+    name: Test Symfony Backend
+    runs-on: ubuntu-latest
+    
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: earlybird
+          POSTGRES_PASSWORD: earlybird
+          POSTGRES_DB: earlybird_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: mbstring, xml, ctype, iconv, intl, pdo_pgsql
+          coverage: none
+      
+      - name: Validate composer.json
+        working-directory: ./earlybird-back
+        run: composer validate --strict
+      
+      - name: Cache Composer packages
+        id: composer-cache
+        uses: actions/cache@v4
+        with:
+          path: earlybird-back/vendor
+          key: ${{ runner.os }}-php-${{ hashFiles('**/composer.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-php-
+      
+      - name: Install dependencies
+        working-directory: ./earlybird-back
+        run: composer install --prefer-dist --no-progress --no-interaction
+      
+      - name: Create .env.test
+        working-directory: ./earlybird-back
+        run: |
+          cp .env .env.test || true
+          echo "DATABASE_URL=postgresql://earlybird:earlybird@127.0.0.1:5432/earlybird_test?serverVersion=15&charset=utf8" >> .env.test
+          echo "APP_ENV=test" >> .env.test
+      
+      - name: Run database migrations
+        working-directory: ./earlybird-back
+        run: |
+          php bin/console doctrine:database:create --env=test --if-not-exists
+          php bin/console doctrine:migrations:migrate --env=test --no-interaction
+      
+      - name: Check Symfony requirements
+        working-directory: ./earlybird-back
+        run: composer check-platform-reqs
+        continue-on-error: true

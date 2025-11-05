@@ -1,3 +1,12 @@
 controllers:
-    resource: ../src/Controller/
-    type: attribute
+  resource: ../src/Controller/
+  type: attribute
+
+reports:
+  resource: ../src/Controller/Reports/
+  type: attribute
+  prefix: /reports
+  name_prefix: reports_
+  
+gesdinet_jwt_refresh_token:
+    path: /api/token/refresh

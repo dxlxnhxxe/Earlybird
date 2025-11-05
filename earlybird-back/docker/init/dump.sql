@@ -1,7 +1,5 @@
 --
 -- PostgreSQL database dump for EarlyBird Backend
--- Version: 16
--- Generated: 2025-10-10
 --
 
 -- =========================================================
@@ -63,11 +61,11 @@ CREATE TABLE IF NOT EXISTS "team_member" (
 );
 
 -- ✅ Données d’exemple pour la table team
-INSERT INTO "team" (id, name, description, manager_id) VALUES
-(1, 'Backend Team', 'Responsible for APIs and data layer', 3),
-(2, 'DevOps Team', 'Handles deployment and CI/CD pipelines', 1),
-(3, 'AI Team', 'Focuses on machine learning models', 2),
-(4, 'All Users', 'All users in the system', 3);
+INSERT INTO "team" (name, description, manager_id) VALUES
+('Backend Team', 'Responsible for APIs and data layer', 3),
+('DevOps Team', 'Handles deployment and CI/CD pipelines', 1),
+('AI Team', 'Focuses on machine learning models', 2),
+('All Users', 'All users in the system', 3);
 
 INSERT INTO team_member (team_id, user_id, start_time, end_time) VALUES
     (1, 1, '09:00', '17:00'),
@@ -92,7 +90,7 @@ INSERT INTO team_member (team_id, user_id, start_time, end_time) VALUES
 
 
 -- =========================================================
--- 🔹 TABLE: clock
+--  TABLE: clock
 -- =========================================================
 CREATE TABLE IF NOT EXISTS clock (
     id SERIAL PRIMARY KEY,
@@ -102,24 +100,20 @@ CREATE TABLE IF NOT EXISTS clock (
     start_time TIME,
     end_time TIME
 );
--- ✅ Données d’exemple pour la table clock
+--  Données d'exemple pour la table clock
 
--- Bob Martin (user_id = 2, team_member_id = 2)
-INSERT INTO clock (timestamp, type, team_member_id) VALUES
-                                                        ('2025-10-01 08:00:00', 'in', 2),
-                                                        ('2025-10-02 08:05:00', 'in', 2),
-                                                        ('2025-10-03 08:10:00', 'in', 2),
-                                                        ('2025-10-06 08:00:00', 'in', 2),
-                                                        ('2025-10-07 08:03:00', 'in', 2),
-                                                        ('2025-10-08 08:15:00', 'in', 2),
-                                                        ('2025-10-09 08:00:00', 'in', 2);
+-- =========================================================
+--  TABLE: refresh_tokens (JWT Refresh Token Bundle)
+-- =========================================================
+CREATE TABLE IF NOT EXISTS refresh_tokens (
+    id SERIAL PRIMARY KEY,
+    refresh_token VARCHAR(128) NOT NULL UNIQUE,
+    username VARCHAR(255) NOT NULL,
+    valid TIMESTAMP NOT NULL
+);
 
--- Clara Admin (user_id = 3, team_member_id = 3)
-INSERT INTO clock (timestamp, type, team_member_id) VALUES
-                                                        ('2025-10-01 08:05:00', 'in', 3),
-                                                        ('2025-10-02 08:10:00', 'in', 3),
-                                                        ('2025-10-03 08:00:00', 'in', 3),
-                                                        ('2025-10-06 08:15:00', 'in', 3),
-                                                        ('2025-10-07 08:05:00', 'in', 3),
-                                                        ('2025-10-08 08:00:00', 'in', 3),
-                                                        ('2025-10-09 08:12:00', 'in', 3);
+-- Index pour optimiser les recherches par token
+CREATE INDEX IF NOT EXISTS idx_refresh_token ON refresh_tokens(refresh_token);
+CREATE INDEX IF NOT EXISTS idx_refresh_token_username ON refresh_tokens(username);
+
+-- ✅ Table refresh_tokens créée pour la gestion des tokens JWT
