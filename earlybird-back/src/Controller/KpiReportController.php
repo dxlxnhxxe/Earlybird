@@ -13,6 +13,590 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 
 class KpiReportController extends AbstractController
 {
+    #[Route('/team-averages', name: 'team_averages', methods: ['GET'])]
+    public function getTeamAverages(Request $request, EntityManagerInterface $em): JsonResponse
+    {
+        $period = $request->query->get('period', 'day');
+        if (!in_array($period, ['day','week','month','year'], true)) {
+            return new JsonResponse([
+                'error' => 'Invalid period value. The period parameter must be one of: day, week, month, or year.'
+            ], 400);
+        }
+
+        // Build date range based on current date and selected period
+        $now = new \DateTimeImmutable('now');
+        switch ($period) {
+            case 'week':
+                // ISO week: Monday 00:00:00 to next Monday
+                $start = $now->modify('monday this week')->setTime(0, 0, 0);
+                $end = $start->modify('+1 week');
+                break;
+            case 'month':
+                $start = $now->modify('first day of this month')->setTime(0, 0, 0);
+                $end = $start->modify('+1 month');
+                break;
+            case 'year':
+                $start = (new \DateTimeImmutable($now->format('Y-01-01 00:00:00')));
+                $end = $start->modify('+1 year');
+                break;
+            default: // day
+                $start = $now->setTime(0, 0, 0);
+                $end = $start->modify('+1 day');
+        }
+
+        // Fetch clocks in range (single query) and map to team members and teams
+        $clocks = $em->createQueryBuilder()
+            ->select('c')
+            ->from(Clock::class, 'c')
+            ->andWhere('c.timestamp >= :start')
+            ->andWhere('c.timestamp < :end')
+            ->setParameter('start', $start)
+            ->setParameter('end', $end)
+            ->getQuery()
+            ->getResult();
+
+        list($memberClocksAll, $memberTeam) = $this->mapClocksToMembers($clocks);
+
+        // Prepare per-team member clocks subsets
+        $teams = $em->getRepository(Team::class)->findAll();
+        $teamsOutput = [];
+        foreach ($teams as $team) {
+            $subset = [];
+            foreach ($memberClocksAll as $memberId => $records) {
+                if (isset($memberTeam[$memberId]) && $memberTeam[$memberId] === $team->getId()) {
+                    $subset[$memberId] = $records;
+                }
+            }
+
+            $teamData = $this->computeSingleTeamData($team, $subset, $period);
+            $teamsOutput[] = $teamData;
+        }
+
+        return new JsonResponse([
+            'teams' => $teamsOutput,
+            'since' => $start->format('Y-m-d'),
+            'until' => $end->format('Y-m-d'),
+            'period' => $period,
+        ]);
+    }
+
+    #[Route('/reports/team-kpis', name: 'reports_team_kpis', methods: ['GET'])]
+    public function getTeamKpis(Request $request, EntityManagerInterface $em): JsonResponse
+    {
+        $teamId = $request->query->get('team_id');
+        $period = $request->query->get('period', 'day');
+
+        if (!$teamId) {
+            return new JsonResponse(['error' => 'Missing required parameter: team_id'], 400);
+        }
+        if (!in_array($period, ['day','week','month','year'], true)) {
+            return new JsonResponse(['error' => 'Invalid period. Must be one of: day, week, month, year.'], 400);
+        }
+
+        $team = $em->getRepository(Team::class)->find($teamId);
+        if (!$team) {
+            return new JsonResponse(['error' => 'Team not found'], 404);
+        }
+
+        // Resolve date range
+        $now = new \DateTimeImmutable('now');
+        switch ($period) {
+            case 'week':
+                $start = $now->modify('monday this week')->setTime(0,0,0);
+                $end = $start->modify('+1 week');
+                break;
+            case 'month':
+                $start = $now->modify('first day of this month')->setTime(0,0,0);
+                $end = $start->modify('+1 month');
+                break;
+            case 'year':
+                $start = (new \DateTimeImmutable($now->format('Y-01-01 00:00:00')));
+                $end = $start->modify('+1 year');
+                break;
+            default:
+                $start = $now->setTime(0,0,0);
+                $end = $start->modify('+1 day');
+        }
+
+        // Fetch all clocks for this team in range
+        $clocks = $em->createQueryBuilder()
+            ->select('c')
+            ->from(Clock::class, 'c')
+            ->join('c.teamMember', 'tm')
+            ->where('tm.team = :teamId')
+            ->andWhere('c.timestamp >= :start')
+            ->andWhere('c.timestamp < :end')
+            ->orderBy('c.timestamp', 'ASC')
+            ->setParameter('teamId', $team->getId())
+            ->setParameter('start', $start)
+            ->setParameter('end', $end)
+            ->getQuery()->getResult();
+
+        $totalClocks = count($clocks);
+        $lastActivity = $this->getLastActivityTimestamp($clocks);
+
+        // Build per-member clocks and user mapping
+        $memberClocks = [];
+        $memberClockCounts = [];
+        $memberUser = [];
+        foreach ($team->getMemberships() as $membership) {
+            $memberClocks[$membership->getId()] = [];
+            $memberClockCounts[$membership->getId()] = 0;
+            $user = $membership->getUser();
+            if ($user) {
+                $memberUser[$membership->getId()] = [
+                    'id' => $user->getId(),
+                    'firstname' => $user->getFirstname(),
+                    'lastname' => $user->getLastname(),
+                    'email' => $user->getEmail(),
+                ];
+            }
+        }
+        $arrivalsByMember = [];
+        $departuresByMember = [];
+        $startBreakByMember = [];
+        $endBreakByMember = [];
+        $arrivalHours = [];
+        $departureHours = [];
+        foreach ($clocks as $clock) {
+            $tm = $clock->getTeamMember();
+            if (!$tm) continue;
+            $mid = $tm->getId();
+            $memberClocks[$mid][] = [
+                'type' => $clock->getType(),
+                'timestamp' => $clock->getTimestamp(),
+            ];
+            $memberClockCounts[$mid] = ($memberClockCounts[$mid] ?? 0) + 1;
+
+            // For additional KPIs
+            $type = $clock->getType();
+            $ts = $clock->getTimestamp();
+            if ($type === 'arrival') {
+                $arrivalsByMember[$mid][] = $ts;
+                $arrivalHours[] = (int)$ts->format('G');
+            }
+            if ($type === 'departure') {
+                $departuresByMember[$mid][] = $ts;
+                $departureHours[] = (int)$ts->format('G');
+            }
+            if ($type === 'start_break') {
+                $startBreakByMember[$mid][] = $ts;
+            }
+            if ($type === 'end_break') {
+                $endBreakByMember[$mid][] = $ts;
+            }
+        }
+
+        // Compute average work seconds per member over the period granularity
+        $memberAvgSeconds = $this->computeMemberWorkSeconds($memberClocks, $period);
+        $membersCount = count($memberClocks);
+        $avgClocksPerMember = $membersCount > 0 ? round($totalClocks / $membersCount, 2) : 0.0;
+
+        $vals = array_values($memberAvgSeconds);
+        sort($vals);
+        $teamAvgSec = $this->averageOfArray($vals);
+        $teamTotalSec = array_sum($vals);
+        $teamMedianSec = 0;
+        if (count($vals) > 0) {
+            $mid = (int) floor((count($vals) - 1) / 2);
+            if (count($vals) % 2 === 1) {
+                $teamMedianSec = $vals[$mid];
+            } else {
+                $teamMedianSec = ($vals[$mid] + $vals[$mid + 1]) / 2;
+            }
+        }
+        $teamMinSec = count($vals) ? min($vals) : 0;
+        $teamMaxSec = count($vals) ? max($vals) : 0;
+
+        // Find most active by clocks and by work time
+        $mostActiveByClocks = null;
+        if (!empty($memberClockCounts)) {
+            $maxClocks = max($memberClockCounts);
+            $mid = array_search($maxClocks, $memberClockCounts, true);
+            $mostActiveByClocks = [
+                'user' => $memberUser[$mid] ?? null,
+                'total_clocks' => $maxClocks,
+            ];
+        }
+        $mostActiveByWork = null;
+        if (!empty($memberAvgSeconds)) {
+            $maxWork = max($memberAvgSeconds);
+            $mid = array_search($maxWork, $memberAvgSeconds, true);
+            $mostActiveByWork = [
+                'user' => $memberUser[$mid] ?? null,
+                'avg_work_seconds' => $maxWork,
+                'avg_work_time' => $this->formatDuration($maxWork),
+            ];
+        }
+
+        // Lateness metrics and punctuality
+        $clockTypes = ['arrival', 'end_work', 'end_break'];
+        $lateClocks = $em->createQueryBuilder()
+            ->select('c')
+            ->from(Clock::class, 'c')
+            ->join('c.teamMember', 'tm')
+            ->join('tm.user', 'u')
+            ->andWhere('tm.team = :teamId')
+            ->andWhere('c.type IN (:types)')
+            ->andWhere('c.timestamp >= :start')
+            ->andWhere('c.timestamp < :end')
+            ->setParameter('teamId', $team->getId())
+            ->setParameter('types', $clockTypes)
+            ->setParameter('start', $start)
+            ->setParameter('end', $end)
+            ->getQuery()->getResult();
+
+        $latenessSecondsAll = [];
+        $latenessByMember = [];
+        $onTimeCount = 0;
+        $arrivalCount = 0;
+        foreach ($lateClocks as $clock) {
+            if ($clock->getType() !== 'arrival') continue;
+            $arrivalCount++;
+            $tm = $clock->getTeamMember();
+            $expectedStart = $tm ? $tm->getStartTime() : null;
+            if (!$expectedStart) continue;
+            $expectedDateTime = new \DateTimeImmutable(
+                $clock->getTimestamp()->format('Y-m-d') . ' ' . $expectedStart->format('H:i:s')
+            );
+            $late = $clock->getTimestamp()->getTimestamp() - $expectedDateTime->getTimestamp();
+            if ($late <= 0) {
+                $onTimeCount++;
+                $later = 0;
+            } else {
+                $later = $late;
+            }
+            $latenessSecondsAll[] = $later;
+            $mid = $tm->getId();
+            if (!isset($latenessByMember[$mid])) $latenessByMember[$mid] = [];
+            $latenessByMember[$mid][] = $later;
+        }
+        $avgLateness = $this->averageOfArray($latenessSecondsAll);
+        $punctualityRate = $arrivalCount > 0 ? $onTimeCount / $arrivalCount : 0.0;
+
+        // Attendance and activity
+        $activeMembers = 0;
+        $sessionsTotal = 0;
+        $sessionSecondsTotal = 0;
+        $totalBreaks = 0;
+        $breakSecondsTotal = 0;
+        $earliestArrival = null; // DateTimeImmutable
+        $latestDeparture = null;
+        foreach ($memberClocks as $mid => $records) {
+            $arrs = $arrivalsByMember[$mid] ?? [];
+            $deps = $departuresByMember[$mid] ?? [];
+            $pairs = min(count($arrs), count($deps));
+            if ($pairs > 0) $activeMembers++;
+            $sessionsTotal += $pairs;
+            for ($i=0; $i<$pairs; $i++) {
+                $sessionSecondsTotal += max(0, $deps[$i]->getTimestamp() - $arrs[$i]->getTimestamp());
+            }
+            if (!empty($arrs)) {
+                $minArr = $arrs[0];
+                foreach ($arrs as $a) { if ($minArr > $a) $minArr = $a; }
+                if ($earliestArrival === null || $minArr < $earliestArrival) $earliestArrival = $minArr;
+            }
+            if (!empty($deps)) {
+                $maxDep = $deps[0];
+                foreach ($deps as $d) { if ($maxDep < $d) $maxDep = $d; }
+                if ($latestDeparture === null || $maxDep > $latestDeparture) $latestDeparture = $maxDep;
+            }
+
+            // Breaks
+            $sbs = $startBreakByMember[$mid] ?? [];
+            $ebs = $endBreakByMember[$mid] ?? [];
+            $bpairs = min(count($sbs), count($ebs));
+            $totalBreaks += $bpairs;
+            for ($i=0; $i<$bpairs; $i++) {
+                $breakSecondsTotal += max(0, $ebs[$i]->getTimestamp() - $sbs[$i]->getTimestamp());
+            }
+        }
+        $inactiveMembers = max(0, count($memberClocks) - $activeMembers);
+        $attendanceRate = (count($memberClocks) > 0) ? $activeMembers / count($memberClocks) : 0.0;
+        $avgSessionLength = ($sessionsTotal > 0) ? ($sessionSecondsTotal / $sessionsTotal) : 0.0;
+        $avgBreaksPerMember = (count($memberClocks) > 0) ? ($totalBreaks / count($memberClocks)) : 0.0;
+        $avgBreakDuration = ($totalBreaks > 0) ? ($breakSecondsTotal / $totalBreaks) : 0.0;
+
+        // Start/End deviation from expected
+        $arrivalDeviationSum = 0; $arrivalDeviationCount = 0;
+        $departureDeviationSum = 0; $departureDeviationCount = 0;
+        foreach ($memberClocks as $mid => $records) {
+            $tm = null;
+            // Find any membership by id
+            foreach ($team->getMemberships() as $m) { if ($m->getId()===$mid) { $tm=$m; break; } }
+            if (!$tm) continue;
+            $expStart = $tm->getStartTime();
+            $expEnd = $tm->getEndTime();
+            foreach ($arrivalsByMember[$mid] ?? [] as $a) {
+                if ($expStart) {
+                    $expDT = new \DateTimeImmutable($a->format('Y-m-d').' '.$expStart->format('H:i:s'));
+                    $arrivalDeviationSum += ($a->getTimestamp() - $expDT->getTimestamp());
+                    $arrivalDeviationCount++;
+                }
+            }
+            foreach ($departuresByMember[$mid] ?? [] as $d) {
+                if ($expEnd) {
+                    $expDT = new \DateTimeImmutable($d->format('Y-m-d').' '.$expEnd->format('H:i:s'));
+                    // positive if departed after expected end; negative if early
+                    $departureDeviationSum += ($d->getTimestamp() - $expDT->getTimestamp());
+                    $departureDeviationCount++;
+                }
+            }
+        }
+        $avgArrivalDeviation = ($arrivalDeviationCount>0) ? ($arrivalDeviationSum/$arrivalDeviationCount) : 0.0;
+        $avgDepartureDeviation = ($departureDeviationCount>0) ? ($departureDeviationSum/$departureDeviationCount) : 0.0;
+
+        // Utilization vs expected schedule hours
+        $daysCount = (int) ceil(($end->getTimestamp() - $start->getTimestamp()) / 86400);
+        if ($daysCount < 1) $daysCount = 1;
+        $expectedTotalSeconds = 0;
+        foreach ($team->getMemberships() as $membership) {
+            $st = $membership->getStartTime();
+            $et = $membership->getEndTime();
+            if ($st && $et) {
+                $sched = max(0, ($et->getTimestamp() - $st->getTimestamp()));
+                $expectedTotalSeconds += $sched * $daysCount;
+            }
+        }
+        $utilizationRate = ($expectedTotalSeconds>0) ? ($teamTotalSec / $expectedTotalSeconds) : 0.0;
+
+        // Spread metrics: stddev and p90 on member averages
+        $stddev = 0.0; $p90 = 0.0;
+        if (count($vals) > 0) {
+            $mean = $teamAvgSec;
+            $sumSq = 0.0; foreach ($vals as $v) { $sumSq += ($v-$mean)*($v-$mean); }
+            $stddev = sqrt($sumSq / count($vals));
+            $idx = (int) floor(0.9 * (count($vals)-1));
+            $p90 = $vals[$idx];
+        }
+
+        // Peak activity hour from all clock events
+        $hourBins = array_fill(0,24,0);
+        foreach ($arrivalHours as $h) { $hourBins[$h]++; }
+        foreach ($departureHours as $h) { $hourBins[$h]++; }
+        $peakHour = 0; $peakVal = -1;
+        foreach ($hourBins as $h=>$cnt) { if ($cnt>$peakVal) { $peakVal=$cnt; $peakHour=$h; } }
+
+        // Punctuality per member: top punctual (min avg lateness) and top late (max)
+        $topPunctual = null; $topLate = null;
+        if (!empty($latenessByMember)) {
+            $minAvg = null; $minMid = null; $maxAvg = null; $maxMid = null;
+            foreach ($latenessByMember as $mid => $valsL) {
+                $a = $this->averageOfArray($valsL);
+                if ($minAvg===null || $a < $minAvg) { $minAvg = $a; $minMid = $mid; }
+                if ($maxAvg===null || $a > $maxAvg) { $maxAvg = $a; $maxMid = $mid; }
+            }
+            if ($minMid!==null) {
+                $topPunctual = [ 'user' => $memberUser[$minMid] ?? null, 'avg_lateness_seconds' => (int)round($minAvg), 'avg_lateness' => $this->formatDuration($minAvg) ];
+            }
+            if ($maxMid!==null) {
+                $topLate = [ 'user' => $memberUser[$maxMid] ?? null, 'avg_lateness_seconds' => (int)round($maxAvg), 'avg_lateness' => $this->formatDuration($maxAvg) ];
+            }
+        }
+
+        return new JsonResponse([
+            'team_id' => $team->getId(),
+            'period' => $period,
+            'since' => $start->format('Y-m-d'),
+            'until' => $end->format('Y-m-d'),
+            'summary' => [
+                'members_count' => $membersCount,
+                'active_members_count' => $activeMembers,
+                'inactive_members_count' => $inactiveMembers,
+                'attendance_rate' => $attendanceRate,
+                'total_clocks' => $totalClocks,
+                'average_clocks_per_member' => $avgClocksPerMember,
+                'last_activity' => $lastActivity,
+                'team_average_work_time_seconds' => (int) round($teamAvgSec),
+                'team_average_work_time' => $this->formatDuration($teamAvgSec),
+                'team_total_work_time_seconds' => (int) round($teamTotalSec),
+                'team_total_work_time' => $this->formatDuration($teamTotalSec),
+                'team_median_work_time_seconds' => (int) round($teamMedianSec),
+                'team_median_work_time' => $this->formatDuration($teamMedianSec),
+                'team_min_work_time_seconds' => (int) round($teamMinSec),
+                'team_min_work_time' => $this->formatDuration($teamMinSec),
+                'team_max_work_time_seconds' => (int) round($teamMaxSec),
+                'team_max_work_time' => $this->formatDuration($teamMaxSec),
+                'average_lateness_seconds' => (int) round($avgLateness),
+                'average_lateness' => $this->formatDuration($avgLateness),
+                'punctuality_rate' => $punctualityRate,
+                'punctuality_percent' => round($punctualityRate * 100, 2),
+                'sessions_total' => $sessionsTotal,
+                'average_session_length_seconds' => (int) round($avgSessionLength),
+                'average_session_length' => $this->formatDuration($avgSessionLength),
+                'total_breaks' => $totalBreaks,
+                'average_breaks_per_member' => $avgBreaksPerMember,
+                'average_break_duration_seconds' => (int) round($avgBreakDuration),
+                'average_break_duration' => $this->formatDuration($avgBreakDuration),
+                'earliest_arrival' => $earliestArrival ? $earliestArrival->format('H:i') : null,
+                'latest_departure' => $latestDeparture ? $latestDeparture->format('H:i') : null,
+                'average_arrival_deviation_seconds' => (int) round($avgArrivalDeviation),
+                'average_arrival_deviation' => $this->formatDuration($avgArrivalDeviation),
+                'average_departure_deviation_seconds' => (int) round($avgDepartureDeviation),
+                'average_departure_deviation' => $this->formatDuration($avgDepartureDeviation),
+                'expected_total_work_time_seconds' => (int) $expectedTotalSeconds,
+                'expected_total_work_time' => $this->formatDuration($expectedTotalSeconds),
+                'utilization_rate' => $utilizationRate,
+                'utilization_percent' => round($utilizationRate * 100, 2),
+                'stddev_work_time_seconds' => (int) round($stddev),
+                'stddev_work_time' => $this->formatDuration($stddev),
+                'p90_work_time_seconds' => (int) round($p90),
+                'p90_work_time' => $this->formatDuration($p90),
+                'peak_activity_hour' => $peakHour,
+            ],
+            'most_active_members' => [
+                'by_clocks' => $mostActiveByClocks,
+                'by_work_time' => $mostActiveByWork,
+            ],
+            'punctuality' => [
+                'top_punctual' => $topPunctual,
+                'top_late' => $topLate,
+            ],
+        ]);
+    }
+
+    #[Route('/reports/team-members-kpis', name: 'reports_team_members_kpis', methods: ['GET'])]
+    public function getTeamMembersKpis(Request $request, EntityManagerInterface $em): JsonResponse
+    {
+        $teamId = $request->query->get('team_id');
+        $period = $request->query->get('period', 'day');
+
+        if (!$teamId) {
+            return new JsonResponse(['error' => 'Missing required parameter: team_id'], 400);
+        }
+        if (!in_array($period, ['day','week','month','year'], true)) {
+            return new JsonResponse(['error' => 'Invalid period. Must be one of: day, week, month, year.'], 400);
+        }
+
+        $team = $em->getRepository(Team::class)->find($teamId);
+        if (!$team) {
+            return new JsonResponse(['error' => 'Team not found'], 404);
+        }
+
+        // Date range
+        $now = new \DateTimeImmutable('now');
+        switch ($period) {
+            case 'week':
+                $start = $now->modify('monday this week')->setTime(0,0,0); $end = $start->modify('+1 week'); break;
+            case 'month':
+                $start = $now->modify('first day of this month')->setTime(0,0,0); $end = $start->modify('+1 month'); break;
+            case 'year':
+                $start = (new \DateTimeImmutable($now->format('Y-01-01 00:00:00'))); $end = $start->modify('+1 year'); break;
+            default:
+                $start = $now->setTime(0,0,0); $end = $start->modify('+1 day');
+        }
+
+        // Fetch clocks for team
+        $clocks = $em->createQueryBuilder()
+            ->select('c')
+            ->from(Clock::class, 'c')
+            ->join('c.teamMember', 'tm')
+            ->join('tm.user', 'u')
+            ->where('tm.team = :teamId')
+            ->andWhere('c.timestamp >= :start')
+            ->andWhere('c.timestamp < :end')
+            ->orderBy('c.timestamp', 'ASC')
+            ->setParameter('teamId', $team->getId())
+            ->setParameter('start', $start)
+            ->setParameter('end', $end)
+            ->getQuery()->getResult();
+
+        // Group by team member
+        $memberClocks = [];
+        $userByMember = [];
+        foreach ($team->getMemberships() as $membership) {
+            $memberClocks[$membership->getId()] = [];
+            $user = $membership->getUser();
+            if ($user) {
+                $userByMember[$membership->getId()] = [
+                    'id' => $user->getId(),
+                    'firstname' => $user->getFirstname(),
+                    'lastname' => $user->getLastname(),
+                    'email' => $user->getEmail(),
+                ];
+            }
+        }
+        foreach ($clocks as $clock) {
+            $tm = $clock->getTeamMember();
+            if (!$tm) continue;
+            $mid = $tm->getId();
+            $memberClocks[$mid][] = [
+                'type' => $clock->getType(),
+                'timestamp' => $clock->getTimestamp(),
+            ];
+        }
+
+        // Compute per-member KPIs
+        $rows = [];
+        foreach ($memberClocks as $mid => $records) {
+            $user = $userByMember[$mid] ?? null;
+
+            // Sessions & total work seconds
+            $arrivals = []; $departures = []; $startBreak = []; $endBreak = [];
+            $totalClocks = count($records);
+            foreach ($records as $r) {
+                $t = $r['type']; $ts = $r['timestamp'];
+                if ($t === 'arrival') $arrivals[] = $ts;
+                if ($t === 'departure') $departures[] = $ts;
+                if ($t === 'start_break') $startBreak[] = $ts;
+                if ($t === 'end_break') $endBreak[] = $ts;
+            }
+            $pairs = min(count($arrivals), count($departures));
+            $sessionsTotal = $pairs;
+            $totalSeconds = 0;
+            for ($i=0; $i<$pairs; $i++) {
+                $totalSeconds += max(0, $departures[$i]->getTimestamp() - $arrivals[$i]->getTimestamp());
+            }
+            $breakPairs = min(count($startBreak), count($endBreak));
+            $breakSeconds = 0; for ($i=0; $i<$breakPairs; $i++) { $breakSeconds += max(0, $endBreak[$i]->getTimestamp() - $startBreak[$i]->getTimestamp()); }
+
+            // Average per selected period granularity using helper
+            $avgPerPeriod = 0; $memberAvg = $this->computeMemberWorkSeconds([$mid => $records], $period); if (isset($memberAvg[$mid])) $avgPerPeriod = $memberAvg[$mid];
+
+            // Lateness and punctuality for member
+            $tm = null; foreach ($team->getMemberships() as $m) { if ($m->getId()===$mid) { $tm=$m; break; } }
+            $avgLateness = 0.0; $onTime=0; $arrCnt=0; $firstArrival=null; $lastDeparture=null;
+            foreach ($arrivals as $a) {
+                $arrCnt++;
+                if ($tm && $tm->getStartTime()) {
+                    $exp = new \DateTimeImmutable($a->format('Y-m-d').' '.$tm->getStartTime()->format('H:i:s'));
+                    $diff = $a->getTimestamp() - $exp->getTimestamp();
+                    if ($diff <= 0) $onTime++;
+                    $avgLateness += max(0, $diff);
+                }
+                if ($firstArrival===null || $a < $firstArrival) $firstArrival=$a;
+            }
+            if ($arrCnt>0) $avgLateness = $avgLateness / $arrCnt; else $avgLateness = 0.0;
+            foreach ($departures as $d) { if ($lastDeparture===null || $d > $lastDeparture) $lastDeparture=$d; }
+            $punctualityRate = ($arrCnt>0) ? ($onTime/$arrCnt) : 0.0;
+
+            $rows[] = [
+                'user' => $user,
+                'total_clocks' => $totalClocks,
+                'sessions_total' => $sessionsTotal,
+                'total_work_seconds' => (int) $totalSeconds,
+                'total_work_time' => $this->formatDuration($totalSeconds),
+                'avg_work_seconds_per_'.$period => (int) round($avgPerPeriod),
+                'avg_work_time_per_'.$period => $this->formatDuration($avgPerPeriod),
+                'total_breaks' => $breakPairs,
+                'total_break_seconds' => (int) $breakSeconds,
+                'total_break_time' => $this->formatDuration($breakSeconds),
+                'avg_lateness_seconds' => (int) round($avgLateness),
+                'avg_lateness' => $this->formatDuration($avgLateness),
+                'punctuality_rate' => $punctualityRate,
+                'first_arrival' => $firstArrival ? $firstArrival->format('H:i') : null,
+                'last_departure' => $lastDeparture ? $lastDeparture->format('H:i') : null,
+            ];
+        }
+
+        return new JsonResponse([
+            'team_id' => $team->getId(),
+            'period' => $period,
+            'since' => $start->format('Y-m-d'),
+            'until' => $end->format('Y-m-d'),
+            'members' => $rows,
+        ]);
+    }
     #[Route('/reports/employee/{id}/daily-work-time', name: 'reports_employee_daily', methods: ['GET'])]
     public function getEmployeeDailyWorkTime(int $id, Request $request, EntityManagerInterface $em): JsonResponse
     {
