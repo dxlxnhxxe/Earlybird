@@ -16,10 +16,17 @@ import { ProfileDropdown } from '@/components/profile-dropdown'
 import { Search } from '@/components/search'
 import { ThemeSwitch } from '@/components/theme-switch'
 import { Analytics } from './components/analytics'
+import { Kpis } from './components/kpis'
+import { TeamMembersKpis } from './components/team-members-kpis'
+import { TeamSelector } from './components/team-selector'
+import { useEffect as useEffectReact } from 'react'
+import { useTeamStore } from '@/stores/team-store'
 import { fetchTeamAverages, ApiTeam } from './api'
 import { useAuthStore } from '@/stores/auth-store'
 
 export function Dashboard() {
+  const { fetchAndInitializeTeams } = useTeamStore()
+  useEffectReact(() => { fetchAndInitializeTeams() }, [fetchAndInitializeTeams])
   const [teams, setTeams] = useState<ApiTeam[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -79,6 +86,9 @@ export function Dashboard() {
             </TabsList>
           </div>
           <TabsContent value='overview' className='space-y-4'>
+            <TeamSelector />
+            <Kpis />
+            <TeamMembersKpis />
             <div className='grid gap-4 sm:grid-cols-2 lg:grid-cols-4'>
               {loading ? (
                 <Card>
