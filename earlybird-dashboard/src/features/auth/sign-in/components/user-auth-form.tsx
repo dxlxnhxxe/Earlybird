@@ -5,9 +5,10 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { Link, useNavigate } from '@tanstack/react-router'
 import { Loader2, LogIn } from 'lucide-react'
 import { toast } from 'sonner'
+import axios from 'axios'
 import { IconFacebook, IconGithub } from '@/assets/brand-icons'
 import { useAuthStore } from '@/stores/auth-store'
-import { sleep, cn } from '@/lib/utils'
+import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import {
   Form,
@@ -51,34 +52,89 @@ export function UserAuthForm({
     },
   })
 
-  function onSubmit(data: z.infer<typeof formSchema>) {
+  async function onSubmit(data: z.infer<typeof formSchema>) {
     setIsLoading(true)
 
-    toast.promise(sleep(2000), {
-      loading: 'Signing in...',
-      success: () => {
-        setIsLoading(false)
+    try {
+      const API_URL = import.meta.env.VITE_API_BASE_URL || 'http://earlybird-api'
 
-        // Mock successful authentication with expiry computed at success time
-        const mockUser = {
-          accountNo: 'ACC001',
-          email: data.email,
-          role: ['user'],
-          exp: Date.now() + 24 * 60 * 60 * 1000, // 24 hours from now
+      const response = await axios.post(`${API_URL}/login`, {
+        email: data.email,
+        password: data.password,
+      })
+
+      const { token, refresh_token, user } = response.data
+
+      // Stocker le refresh token dans localStorage
+      localStorage.setItem('refresh_token_local', refresh_token)
+
+      // Stocker le token d'accès dans un cookie
+      document.cookie = `thisisjustarandomstring=${token}; path=/; max-age=${7 * 24 * 60 * 60}`
+
+      // Mettre à jour le store avec les informations utilisateur
+      auth.setUser({
+        id: user.id,
+        email: user.email,
+        firstname: user.firstname,
+        lastname: user.lastname,
+        roles: user.roles,
+      })
+      auth.setAccessToken(token)
+
+      // Redirection vers le dashboard
+      const targetPath = redirectTo || '/'
+      navigate({ to: targetPath, replace: true })
+
+      toast.success(`Bienvenue ${user.firstname} ${user.lastname}!`)
+    } catch (error) {
+      // Capturer TOUTES les erreurs et les gérer ici
+      // Ne jamais laisser l'erreur remonter au niveau global
+      console.error('Erreur de connexion:', error)
+
+      if (axios.isAxiosError(error)) {
+        if (error.response) {
+          // Erreur avec réponse du serveur
+          const status = error.response.status
+          const errorData = error.response.data?.error || 'Erreur lors de la connexion'
+
+          switch (status) {
+            case 400:
+              // Email invalide ou champs manquants
+              toast.error(errorData)
+              break
+            case 401:
+              // Utilisateur introuvable ou mot de passe incorrect
+              toast.error('Email ou mot de passe incorrect. Veuillez réessayer.')
+              // Optionnel: vider le champ password
+              form.setValue('password', '')
+              break
+            case 500:
+            case 502:
+            case 503:
+            case 504:
+              // Erreurs serveur
+              toast.error('Le serveur rencontre un problème. Veuillez réessayer plus tard.')
+              break
+            default:
+              toast.error(errorData)
+          }
+        } else if (error.request) {
+          // Serveur inaccessible (pas de réponse reçue)
+          toast.error('Impossible de contacter le serveur. Vérifiez votre connexion internet ou que le backend est démarré.')
+        } else {
+          // Erreur de configuration de la requête
+          toast.error('Une erreur est survenue lors de la configuration de la requête.')
         }
+      } else {
+        // Erreur non liée à axios
+        toast.error('Une erreur inattendue est survenue.')
+      }
 
-        // Set user and access token
-        auth.setUser(mockUser)
-        auth.setAccessToken('mock-access-token')
-
-        // Redirect to the stored location or default to dashboard
-        const targetPath = redirectTo || '/'
-        navigate({ to: targetPath, replace: true })
-
-        return `Welcome back, ${data.email}!`
-      },
-      error: 'Error',
-    })
+      // NE PAS relancer l'erreur - elle est complètement gérée ici
+      // return false pour indiquer que le formulaire n'a pas été soumis avec succès
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   return (
