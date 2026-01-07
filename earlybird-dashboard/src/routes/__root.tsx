@@ -4,7 +4,6 @@ import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
 import { TanStackRouterDevtools } from '@tanstack/react-router-devtools'
 import { Toaster } from '@/components/ui/sonner'
 import { NavigationProgress } from '@/components/navigation-progress'
-import { GeneralError } from '@/features/errors/general-error'
 import { NotFoundError } from '@/features/errors/not-found-error'
 import { useTeamStore } from '@/stores/team-store'
 import { useEffect } from 'react'
@@ -32,10 +31,14 @@ function App() {
   )
 }
 
+function MinimalErrorComponent() {
+  return <Outlet />
+}
+
 export const Route = createRootRouteWithContext<{
   queryClient: QueryClient
 }>()({
   component: App,
   notFoundComponent: NotFoundError,
-  errorComponent: GeneralError,
+  errorComponent: MinimalErrorComponent,
 })

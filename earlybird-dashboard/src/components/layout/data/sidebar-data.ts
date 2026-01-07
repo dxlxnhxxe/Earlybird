@@ -24,10 +24,12 @@ import {
 import { type SidebarData } from '../types'
 
 export const sidebarData: SidebarData = {
+  // Note: user data is now dynamically loaded from auth store
+  // This static data is kept for type compatibility but will be overridden
   user: {
-    name: 'satnaing',
-    email: 'satnaingdev@gmail.com',
-    avatar: '/avatars/shadcn.jpg',
+    name: '',
+    email: '',
+    avatar: '',
   },
   teams: [
     {
