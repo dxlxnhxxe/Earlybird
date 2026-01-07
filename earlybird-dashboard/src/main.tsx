@@ -51,16 +51,19 @@ const queryClient = new QueryClient({
   queryCache: new QueryCache({
     onError: (error) => {
       if (error instanceof AxiosError) {
+        // Gestion des erreurs 401 pour les requêtes authentifiées uniquement
+        // Ne pas rediriger si on est déjà sur la page de connexion
         if (error.response?.status === 401) {
-          toast.error('Session expired!')
-          useAuthStore.getState().auth.reset()
-          const redirect = `${router.history.location.href}`
-          router.navigate({ to: '/sign-in', search: { redirect } })
+          const currentPath = window.location.pathname
+          if (!currentPath.includes('/sign-in') && !currentPath.includes('/sign-up')) {
+            toast.error('Session expirée!')
+            useAuthStore.getState().auth.reset()
+            const redirect = `${router.history.location.href}`
+            router.navigate({ to: '/sign-in', search: { redirect } })
+          }
         }
-        if (error.response?.status === 500) {
-          toast.error('Internal Server Error!')
-          router.navigate({ to: '/500' })
-        }
+        // Suppression de la redirection automatique vers /500
+        // Les erreurs sont maintenant gérées au niveau des composants avec des toasts
         if (error.response?.status === 403) {
           // router.navigate("/forbidden", { replace: true });
         }

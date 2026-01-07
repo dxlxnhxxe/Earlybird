@@ -10,7 +10,6 @@ use Gesdinet\JWTRefreshTokenBundle\Entity\RefreshToken;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Annotation\Route;
-use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 
 class AuthController extends AbstractController
@@ -20,8 +19,7 @@ class AuthController extends AbstractController
         Request $request,
         EntityManagerInterface $em,
         JWTTokenManagerInterface $jwtManager,
-        RefreshTokenManagerInterface $refreshTokenManager,
-        UserPasswordHasherInterface $passwordHasher
+        RefreshTokenManagerInterface $refreshTokenManager
     ): JsonResponse {
         $data = json_decode($request->getContent(), true);
         $email = $data['email'] ?? null;
@@ -29,18 +27,27 @@ class AuthController extends AbstractController
 
         $payload = [];
 
+        // Validation des champs requis
         if (!$email || !$password) {
             $payload = ['error' => 'Email et mot de passe requis'];
+            $status = 400;
+        }
+        // Validation du format email
+        elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            $payload = ['error' => 'Format d\'email invalide'];
+            $status = 400;
+        }
+        // Validation de la longueur du mot de passe
+        elseif (strlen($password) < 1 || strlen($password) > 4096) {
+            $payload = ['error' => 'Mot de passe invalide'];
             $status = 400;
         } else {
             $user = $em->getRepository(User::class)->findOneBy(['email' => $email]);
 
-            if (!$user) {
-                $payload = ['error' => 'Utilisateur introuvable'];
-                $status = 401;
-            } elseif (!$this->verifyPassword($user, $password, $passwordHasher)) {
-                // Vérification hybride : hash ou mot de passe en clair
-                $payload = ['error' => 'Identifiants invalides'];
+            // Vérification du mot de passe (en clair pour le développement)
+            if (!$user || $user->getPassword() !== $password) {
+                // Message générique pour ne pas révéler si l'utilisateur existe
+                $payload = ['error' => 'Email ou mot de passe incorrect'];
                 $status = 401;
             } else {
                 // Génération du token JWT
@@ -118,31 +125,5 @@ class AuthController extends AbstractController
             'token' => $newAccessToken,
             'refresh_token' => $newRefreshToken->getRefreshToken(),
         ]);
-    }
-
-    /**
-     * Vérifie le mot de passe en détectant automatiquement le format
-     * - Si le password envoyé ressemble à un hash, comparaison directe
-     * - Sinon, vérification avec hachage via passwordHasher
-     */
-    private function verifyPassword(User $user, string $password, UserPasswordHasherInterface $passwordHasher): bool
-    {
-        // Détecter si le password ressemble à un hash bcrypt/argon2
-        if ($this->looksLikeHash($password)) {
-            // Comparaison directe avec le hash stocké
-            return $user->getPassword() === $password;
-        } else {
-            // Vérification normale avec hachage du mot de passe en clair
-            return $passwordHasher->isPasswordValid($user, $password);
-        }
-    }
-
-    /**
-     * Détermine si une chaîne ressemble à un hash de mot de passe
-     */
-    private function looksLikeHash(string $password): bool
-    {
-        // Patterns pour bcrypt ($2y$), argon2i ($argon2i$), argon2id ($argon2id$)
-        return preg_match('/^(\$2[ayb]\$|\$argon2id?\$)/', $password) === 1;
     }
 }

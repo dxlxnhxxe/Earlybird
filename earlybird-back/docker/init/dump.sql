@@ -31,16 +31,15 @@ CREATE TABLE IF NOT EXISTS "user" (
 -- ✅ Données d’exemple pour la table user
 
 INSERT INTO "user" (firstname, lastname, email, phone_number, password, role, code_pin) VALUES
-('Alice', 'Durand', 'alice.durand@example.com', '0601020304', '$2y$10$abcd1234hash', 'user', 1111),
-('Bob', 'Martin', 'bob.martin@example.com', '0605060708', '$2y$10$efgh5678hash', 'user', 2222),
-('Clara', 'Admin', 'clara.admin@example.com', '0610101010', '$2y$10$ijkl9012hash', 'admin', 9999),
-('David', 'Lopez', 'david.lopez@example.com', '0602030405', '$2y$10$mnop3456hash', 'user', 3333),
-('Emma', 'Dubois', 'emma.dubois@example.com', '0603040506', '$2y$10$qrst7890hash', 'user', 4444),
-('Fanny', 'Petit', 'fanny.petit@example.com', '0604050607', '$2y$10$uvwx1234hash', 'user', 5555),
-('Gabriel', 'Roux', 'gabriel.roux@example.com', '0605060708', '$2y$10$yzab5678hash', 'user', 6666),
-('Hugo', 'Lefevre', 'hugo.lefevre@example.com', '0606070809', '$2y$10$cdef9012hash', 'user', 7777),
-('Isabelle', 'Moreau', 'isabelle.moreau@example.com', '0607080910', '$2y$10$ghij3456hash', 'user', 8888);
-
+('Alice', 'Durand', 'alice.durand@example.com', '0601020304', 'alice123456', 'user', 1111),
+('Bob', 'Martin', 'bob.martin@example.com', '0605060708', 'bob123456', 'user', 2222),
+('Clara', 'Admin', 'clara.admin@example.com', '0610101010', 'clara123456', 'admin', 9999),
+    ('David', 'Lopez', 'david.lopez@example.com', '0602030405', 'david123456', 'user', 3333),
+    ('Emma', 'Dubois', 'emma.dubois@example.com', '0603040506', 'emma123456', 'user', 4444),
+('Fanny', 'Petit', 'fanny.petit@example.com', '0604050607', 'fanny123456', 'user', 5555),
+('Gabriel', 'Roux', 'gabriel.roux@example.com', '0605060708', 'gabriel123456', 'user', 6666),
+('Hugo', 'Lefevre', 'hugo.lefevre@example.com', '0606070809', 'hugo123456', 'user', 7777),
+('Isabelle', 'Moreau', 'isabelle.moreau@example.com', '0607080910', 'isabelle123456', 'user', 8888);
 -- =========================================================
 -- 🔹 TABLE: team
 -- =========================================================
