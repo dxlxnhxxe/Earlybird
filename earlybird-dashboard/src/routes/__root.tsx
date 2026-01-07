@@ -31,9 +31,7 @@ function App() {
   )
 }
 
-// Composant d'erreur minimal qui ne fait que continuer le rendu
 function MinimalErrorComponent() {
-  // Ne rien afficher, juste retourner l'Outlet pour continuer le rendu
   return <Outlet />
 }
 
