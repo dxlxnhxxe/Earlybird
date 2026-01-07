@@ -17,11 +17,13 @@ import { Search } from '@/components/search'
 import { ThemeSwitch } from '@/components/theme-switch'
 import { Analytics } from './components/analytics'
 import { fetchTeamAverages, ApiTeam } from './api'
+import { useAuthStore } from '@/stores/auth-store'
 
 export function Dashboard() {
   const [teams, setTeams] = useState<ApiTeam[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const { auth } = useAuthStore()
 
   useEffect(() => {
     setLoading(true)
@@ -47,7 +49,14 @@ export function Dashboard() {
       {/* ===== Main ===== */}
       <Main>
         <div className='mb-2 flex items-center justify-between space-y-2'>
-          <h1 className='text-2xl font-bold tracking-tight'>Dashboard</h1>
+          <div>
+            <h1 className='text-2xl font-bold tracking-tight'>
+              Bienvenue {auth.user?.firstname || 'Utilisateur'} !
+            </h1>
+            <p className='text-muted-foreground text-sm'>
+              Voici un aperçu de vos statistiques
+            </p>
+          </div>
           <div className='flex items-center space-x-2'>
             <Button>Download</Button>
           </div>
