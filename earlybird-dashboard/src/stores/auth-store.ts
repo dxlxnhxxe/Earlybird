@@ -21,7 +21,6 @@ interface AuthState {
     setAccessToken: (accessToken: string) => void
     resetAccessToken: () => void
     reset: () => void
-    // Helper functions
     getDisplayName: () => string
     getInitials: () => string
     isAuthenticated: () => boolean
@@ -57,7 +56,7 @@ export const useAuthStore = create<AuthState>()((set, get) => {
             auth: { ...state.auth, user: null, accessToken: '' },
           }
         }),
-      // Helper functions
+
       getDisplayName: () => {
         const { user } = get().auth
         if (!user) return 'Guest'
