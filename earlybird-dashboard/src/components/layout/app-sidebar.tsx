@@ -12,17 +12,22 @@ import { NavGroup } from './nav-group'
 import { NavUser } from './nav-user'
 import { TeamSwitcher } from './team-switcher'
 import { useTeamStore } from '@/stores/team-store'
+import { useAuthStore } from '@/stores/auth-store'
 
 export function AppSidebar() {
   const { collapsible, variant } = useLayout()
   const { isAdminTeam } = useTeamStore()
+  const { auth } = useAuthStore()
 
-  // Filter navigation groups to only show Teams for admin users
+  // Check if user has admin role from auth store or team
+  const isAdmin = auth.isAdmin() || isAdminTeam
+
+  // Filter navigation groups to only show admin items for admin users
   const filteredNavGroups = sidebarData.navGroups.map(group => ({
     ...group,
     items: group.items.filter(item => {
-      // Hide Teams item for non-admin users
-      if (item.title === 'Teams' && !isAdminTeam) {
+      // Hide Users and Teams for non-admin users
+      if ((item.title === 'Teams' || item.title === 'Users') && !isAdmin) {
         return false
       }
       return true

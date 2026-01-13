@@ -164,7 +164,7 @@ const KioskHomePage: React.FC = () => {
                     {error && <div style={{ color: 'red', marginTop: 8 }}>{error}</div>}
                     {timer !== null && (
                         <div style={{ marginTop: 16, fontSize: '1.5rem', fontWeight: 600 }}>
-                            Clocked in for: {Math.floor(timer / 60)}:{(timer % 60).toString().padStart(2, '0')}
+                            Clocked in for: {Math.floor(timer / 3600)}:{Math.floor((timer % 3600) / 60).toString().padStart(2, '0')}:{(timer % 60).toString().padStart(2, '0')}
                         </div>
                     )}
                 </div>
