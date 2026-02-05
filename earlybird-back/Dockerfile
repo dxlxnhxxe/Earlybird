@@ -1,7 +1,7 @@
 # ==========================
 # Étape 1 : Image PHP
 # ==========================
-FROM php:8.2-cli
+FROM php:8.3-cli
 
 # Définir le dossier de travail
 WORKDIR /earlybird-back
