@@ -124,4 +124,4 @@ For more details about the reverse proxy configuration, see [reverse-proxy/READM
 ## 🛠️ Built With
 - **Frontend:** ReactJS
 - **Backend:** PHP
-- **Database:** (We don't know yet)
+- **Database:** PostgreSQL
