@@ -1,10 +1,10 @@
-# EarlyBird ⏰
+# EarlyBird
 
 **A simple and efficient time tracking module to monitor time spent on projects and tasks.**
 
 ---
 
-## 🌟 Features
+## Features
 - **Manual/Auto Tracking:** Start and stop the timer for each task.
 - **Project-Based Tracking:** Associate time with specific projects or clients.
 - **Detailed Reports:** Export your data as CSV or PDF for analysis.
@@ -12,7 +12,7 @@
 
 ---
 
-## 🚀 Getting Started
+## Getting Started
 
 ### Prerequisites
 - Docker Desktop (recommended)
@@ -113,7 +113,7 @@ Port 80 (Reverse Proxy - Virtual Hosts)
 
 For more details about the reverse proxy configuration, see [reverse-proxy/README.md](reverse-proxy/README.md).
 
-## 📝 Usage
+## Usage
 1. **Create a Project:** Add a project or task in the dashboard.
 2. **Start Tracking:** Click "Start" to begin the timer.
 3. **Stop Tracking:** Click "Stop" to save the duration.
@@ -121,7 +121,7 @@ For more details about the reverse proxy configuration, see [reverse-proxy/READM
 
 ---
 
-## 🛠️ Built With
+## Built With
 - **Frontend:** ReactJS
 - **Backend:** PHP
 - **Database:** PostgreSQL
