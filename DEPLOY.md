@@ -37,7 +37,9 @@ dashboard rather than into a file.
    -- paste in:
    - `DATABASE_URL`: the Neon connection string from step 0 above.
    - `JWT_PRIVATE_KEY_PEM` / `JWT_PUBLIC_KEY_PEM`: see section 5 below.
-   - `VITE_CLERK_PUBLISHABLE_KEY`: your real Clerk publishable key.
+   (There's no Clerk key to provide -- the dashboard's `/clerk` route is
+   unused demo code left over from the admin-dashboard template it's built
+   on; the app's real login doesn't need it, so it's not in the blueprint.)
 
 ## 2. Confirm the real service URLs
 

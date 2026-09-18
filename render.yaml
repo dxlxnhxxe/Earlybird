@@ -70,7 +70,8 @@ services:
       # Baked in at build time (Vite). Must match the backend's actual URL below.
       - key: VITE_API_BASE_URL
         value: https://earlybird-back.onrender.com
-      # Not set here on purpose (sync: false) -- add your real Clerk publishable key
-      # as a secret in the Render dashboard after the service is created.
-      - key: VITE_CLERK_PUBLISHABLE_KEY
-        sync: false
+      # No VITE_CLERK_PUBLISHABLE_KEY here on purpose: it's only used by the
+      # unused /clerk demo route left over from the admin-dashboard template
+      # this app is built on (src/routes/clerk/route.tsx). The app's real
+      # login doesn't use Clerk and that route falls back gracefully without
+      # a key, so it isn't wired in here.
