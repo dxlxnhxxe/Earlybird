@@ -1611,33 +1611,26 @@ class KpiReportController extends AbstractController
 
     private function computeSingleTeamData(Team $team, array $memberClocks, string $period): array
     {
-        // Compute average work seconds per member
+        // Compute average work seconds per member who actually has clocks in this period
         $memberSeconds = $this->computeMemberWorkSeconds($memberClocks, $period);
 
         // Aggregate team data
         $teamData = [
             'id' => $team->getId(),
             'name' => $team->getName(),
-            '_sum' => 0,
-            '_count' => 0,
             'average_work_time_seconds' => 0,
             'average_work_time' => '00h 00m',
-            'members_count' => 0
+            // Actual team headcount (from the team's memberships), not the number of
+            // members who happened to clock in during this period -- those are two very
+            // different numbers, and the dashboard renders this one as "X members" on the
+            // team card, so using the clocked-in count made every team with no activity
+            // today show "0 members" even though it clearly has members.
+            'members_count' => count($team->getMemberships())
         ];
 
-        foreach ($memberSeconds as $avgSec) {
-            $teamData['_sum'] += $avgSec;
-            $teamData['_count']++;
-        }
-
-        // Finalize averages
-        $count = $teamData['_count'];
         $avgSec = (int) round($this->averageOfArray($memberSeconds));
-        $teamData['members_count'] = $count;
         $teamData['average_work_time_seconds'] = $avgSec;
         $teamData['average_work_time'] = $this->formatDuration($avgSec);
-
-        unset($teamData['_sum'], $teamData['_count']);
 
         return $teamData;
     }
