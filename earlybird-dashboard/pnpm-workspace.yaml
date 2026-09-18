@@ -1,0 +1,11 @@
+# Explicitly allow install/build scripts for these deps. pnpm 10.26+ blocks
+# build scripts for dependencies by default (a supply-chain safety measure)
+# unless they're approved interactively (`pnpm approve-builds`, not usable
+# in a non-interactive Docker build) or listed here. Without this, `pnpm
+# install --frozen-lockfile` in the Dockerfile fails with
+# ERR_PNPM_IGNORED_BUILDS. This list matches exactly what pnpm reported as
+# ignored.
+allowBuilds:
+  '@swc/core': true
+  '@tailwindcss/oxide': true
+  esbuild: true
