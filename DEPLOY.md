@@ -12,18 +12,19 @@ public HTTPS URL, so the nginx reverse-proxy (which routed by hostname, e.g.
 ## 0. Your Neon database (already created)
 
 A free Neon project called `earlybird` was already created for you (Postgres
-16, matching what `docker-compose.yml` uses locally). Its connection string:
+16, matching what `docker-compose.yml` uses locally). Get its connection
+string yourself at [console.neon.tech](https://console.neon.tech) -- open
+the `earlybird` project, Connect, copy the connection string for the
+`earlybird` database. You'll paste it into Render as `DATABASE_URL` in step 1
+below.
 
-```
-postgresql://earlybird_owner:***REMOVED-ROTATED-NEON-PASSWORD***@ep-curly-block-b42rcfte-pooler.c-6.us-east-2.aws.neon.tech/earlybird?channel_binding=require&sslmode=require
-```
-
-You'll paste this into Render as `DATABASE_URL` in step 1 below. You can see
-and manage the project at [console.neon.tech](https://console.neon.tech) --
-it's under the same account you connected here. Treat that connection string
-like a password: it's not committed anywhere in this repo (`DATABASE_URL` is
-`sync: false` in `render.yaml`), so paste it directly into Render's
-dashboard rather than into a file.
+**Do not paste the connection string into this file, a commit, or anywhere
+else that ends up in git.** An earlier version of this doc did exactly that
+(committed the real string in plaintext) and GitHub's/Neon's secret scanning
+flagged it within hours of the push -- the password has since been rotated,
+but treat that as a close call, not a non-issue. `DATABASE_URL` is
+`sync: false` in `render.yaml` specifically so Render prompts you for it
+interactively instead of it living in a file; keep it that way.
 
 ## 1. Deploy the Blueprint
 
@@ -69,10 +70,10 @@ was created (you don't need to wait for the Render deploy to do this part):
 `dump.sql` already contains full `CREATE TABLE` statements plus seed data, so
 running it is all you need -- no separate Doctrine migrations step required.
 
-1. From a machine with `psql` installed:
+1. From a machine with `psql` installed (fetch the connection string from
+   console.neon.tech first, per section 0 -- don't hardcode it anywhere):
    ```bash
-   psql "postgresql://earlybird_owner:***REMOVED-ROTATED-NEON-PASSWORD***@ep-curly-block-b42rcfte-pooler.c-6.us-east-2.aws.neon.tech/earlybird?channel_binding=require&sslmode=require" \
-     -f earlybird-back/docker/init/dump.sql
+   psql "$NEON_CONNECTION_STRING" -f earlybird-back/docker/init/dump.sql
    ```
 2. The very first block in that file tries to `CREATE DATABASE` via the
    `dblink` extension -- that's for the local docker-compose setup, where the
