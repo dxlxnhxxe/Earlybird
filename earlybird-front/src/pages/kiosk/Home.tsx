@@ -158,7 +158,10 @@ const KioskHomePage: React.FC = () => {
                             {loading ? 'Clocking out...' : timer !== null ? 'Clock out' : 'Clocked out'}
                         </button>
                     )}
-                    <button className="home-action-btn orange" disabled={timer !== null}>
+                    {/* Break tracking has no backend support yet (the /clocks endpoint only
+                        accepts 'arrival'/'departure'), so this stays disabled rather than
+                        being a clickable button that silently does nothing. */}
+                    <button className="home-action-btn orange" disabled title="Coming soon">
                         <span style={{ fontSize: '2rem', display: 'flex', alignItems: 'center' }}>☕</span>
                         Start break
                     </button>

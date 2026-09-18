@@ -11,6 +11,7 @@ const IndexPage: React.FC = () => {
     const [users, setUsers] = useState([])
     const [team, setTeam] = useState<any>(null)
     const [loading, setLoading] = useState(true)
+    const [search, setSearch] = useState('')
 
     useEffect(() => {
         const fetchData = async () => {
@@ -56,7 +57,12 @@ const IndexPage: React.FC = () => {
             </div>
             <div className="main">
                 <div className="search-bar">
-                    <input type="text" placeholder="Search" />
+                    <input
+                        type="text"
+                        placeholder="Search"
+                        value={search}
+                        onChange={(e) => setSearch(e.target.value)}
+                    />
                     <span className="search-icon" aria-hidden="true">
                         <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
                             <circle cx="9" cy="9" r="7" stroke="#b0b3b8" strokeWidth="2" />
@@ -70,7 +76,13 @@ const IndexPage: React.FC = () => {
                     </div>
                 ) : (
                     <div className="user-list">
-                        {users.map((user: any) => (
+                        {users
+                            .filter((user: any) => {
+                                if (!search.trim()) return true
+                                const fullName = `${user.firstname} ${user.lastname}`.toLowerCase()
+                                return fullName.includes(search.trim().toLowerCase())
+                            })
+                            .map((user: any) => (
                             <div key={user.id} className="user-item" style={{ cursor: 'pointer' }} onClick={() => navigate(`/kiosk/login?userId=${user.id}${teamId ? `&teamId=${teamId}` : ''}`)}>
                                 <img
                                     src={`https://api.dicebear.com/9.x/thumbs/svg?seed=${encodeURIComponent(user.firstname + ' ' + user.lastname)}&scale=80&backgroundColor=transparent`}
