@@ -67,6 +67,18 @@ class UsersManagementController extends AbstractController
         return new JsonResponse(['error' => 'Email and password are required'], 400);
     }
 
+    if (!filter_var($data['email'], FILTER_VALIDATE_EMAIL)) {
+        return new JsonResponse(['error' => 'Invalid email format'], 400);
+    }
+
+    // Vérifier que l'email n'est pas déjà utilisé (sinon le flush() plus bas
+    // lève une exception DBAL non interceptée sur la contrainte unique, qui
+    // remonte comme une page d'erreur HTML 500 au lieu d'un 409 JSON propre)
+    $existingUser = $em->getRepository(User::class)->findOneBy(['email' => $data['email']]);
+    if ($existingUser) {
+        return new JsonResponse(['error' => 'An account with this email already exists'], 409);
+    }
+
     // Créer et remplir l'entité User
     $user = new User();
     $user->setFirstname($data['firstname'] ?? '')
@@ -224,7 +236,16 @@ class UsersManagementController extends AbstractController
         }
         if(isset($data['firstname'])) $user->setFirstname($data['firstname']);
         if(isset($data['lastname'])) $user->setLastname($data['lastname']);
-        if(isset($data['email'])) $user->setEmail($data['email']);
+        if(isset($data['email']) && $data['email'] !== $user->getEmail()) {
+            if (!filter_var($data['email'], FILTER_VALIDATE_EMAIL)) {
+                return new JsonResponse(['error' => 'Invalid email format'], 400);
+            }
+            $existingUser = $em->getRepository(User::class)->findOneBy(['email' => $data['email']]);
+            if ($existingUser) {
+                return new JsonResponse(['error' => 'An account with this email already exists'], 409);
+            }
+            $user->setEmail($data['email']);
+        }
         if(isset($data['phone_number'])) $user->setPhoneNumber($data['phone_number']);
         if(isset($data['role'])) $user->setRole($data['role']);
         if(isset($data['code_pin'])) $user->setCodePin($data['code_pin']);

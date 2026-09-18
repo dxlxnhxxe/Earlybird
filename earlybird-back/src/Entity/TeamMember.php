@@ -23,7 +23,7 @@ class TeamMember
     private ?Team $team = null;
 
     // Relation ManyToOne vers User (un user peut être dans plusieurs équipes)
-    #[ORM\ManyToOne(targetEntity: User::class, cascade: ['persist'])]
+    #[ORM\ManyToOne(targetEntity: User::class, inversedBy: 'teamMemberships', cascade: ['persist'])]
     #[ORM\JoinColumn(name: 'user_id', referencedColumnName: 'id', nullable: false, onDelete: 'CASCADE')]
     private ?User $user = null;
 

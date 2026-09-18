@@ -997,11 +997,13 @@ class KpiReportController extends AbstractController
 
             // Map clocks to members
             $membersClocks = [];
+            $membersUser = [];
             foreach ($clocks as $clock) {
                 $tm = $clock->getTeamMember();
                 $uid = $tm->getUser()->getId();
                 if (!isset($membersClocks[$uid])) {
                     $membersClocks[$uid] = [];
+                    $membersUser[$uid] = $tm->getUser();
                 }
                 $membersClocks[$uid][] = ['type' => $clock->getType(), 'timestamp' => $clock->getTimestamp()];
             }
@@ -1026,8 +1028,11 @@ class KpiReportController extends AbstractController
                         $totalSeconds += $interval;
                     }
                 }
+                // Bug fix: this used to read $tm->getUser() here, but $tm was left over from the
+                // mapping loop above and pointed at whichever clock was processed last -- every
+                // member in the team ended up labeled with that same (wrong) user's name.
                 $membersSummary[$uid] = [
-                    'user_name' => $tm->getUser()->getFirstname() . ' ' . $tm->getUser()->getLastname(),
+                    'user_name' => $membersUser[$uid]->getFirstname() . ' ' . $membersUser[$uid]->getLastname(),
                     'total_work_time' => $totalSeconds
                 ];
             }
@@ -1176,6 +1181,9 @@ class KpiReportController extends AbstractController
         $latenessGrouped = [];
 
         foreach ($clocks as $clock) {
+            if ($clock->getType() !== 'arrival') {
+                continue;
+            }
             $clockTime = $clock->getTimestamp();
             $teamMember = $clock->getTeamMember();
             $expectedStart = $teamMember->getStartTime();
@@ -1372,10 +1380,12 @@ class KpiReportController extends AbstractController
 
     private function formatDuration(float $seconds): string
     {
-        $h = floor($seconds / 3600);
-        $m = floor(($seconds % 3600) / 60);
-        $s = floor($seconds % 60);
-        return sprintf('%02dh %02dm %02ds', $h, $m, $s);
+        $sign = $seconds < 0 ? '-' : '';
+        $totalSeconds = (int) floor(abs($seconds));
+        $h = intdiv($totalSeconds, 3600);
+        $m = intdiv($totalSeconds % 3600, 60);
+        $s = $totalSeconds % 60;
+        return sprintf('%s%02dh %02dm %02ds', $sign, $h, $m, $s);
     }
 
     private function resolveDateRange(?string $day, ?string $week, ?string $month, ?string $year): array
@@ -1407,9 +1417,13 @@ class KpiReportController extends AbstractController
                 $rangeStart = $firstDayOfMonth->modify("+$startOffsetDays days");
                 $rangeEnd = $rangeStart->modify('+7 days');
 
-                $lastDayWithTime = $lastDayOfMonth->setTime(23, 59, 59);
-                if ($rangeEnd > $lastDayWithTime) {
-                    $rangeEnd = $lastDayWithTime;
+                // Exclusive upper bound (start of the day after the month's last day), matching
+                // every other range in this file. Using the last day at 23:59:59 here would be an
+                // inclusive/exclusive mismatch against the "< end" queries and silently drop any
+                // clock timestamped exactly at 23:59:59 on the month's last day.
+                $endOfMonthExclusive = $lastDayOfMonth->modify('+1 day')->setTime(0, 0, 0);
+                if ($rangeEnd > $endOfMonthExclusive) {
+                    $rangeEnd = $endOfMonthExclusive;
                 }
 
             } elseif ($week !== null && $year !== null) {
@@ -1506,6 +1520,12 @@ class KpiReportController extends AbstractController
                     $departureClocks[] = $record;
                 }
             }
+
+            // Sort chronologically before pairing by index: the query result order is not
+            // guaranteed, and pairing an out-of-order arrival with the wrong departure would
+            // silently produce a wildly incorrect (often huge) total.
+            usort($arrivalClocks, fn($a, $b) => $a['timestamp'] <=> $b['timestamp']);
+            usort($departureClocks, fn($a, $b) => $a['timestamp'] <=> $b['timestamp']);
 
             // Determine how many complete pairs of arrival/departure we have
             $numberOfPairs = count($arrivalClocks);

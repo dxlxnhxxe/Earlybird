@@ -50,13 +50,14 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\OneToMany(mappedBy: 'manager', targetEntity: Team::class)]
     private Collection $managedTeams;
 
-    // Un user peut être membre de plusieurs teams
-    #[ORM\ManyToMany(targetEntity: Team::class, mappedBy: 'members')]
-    private Collection $teams;
+    // Un user peut être membre de plusieurs teams (via TeamMember, qui porte
+    // aussi start_time/end_time -- une vraie ManyToMany ne pourrait pas stocker ça)
+    #[ORM\OneToMany(mappedBy: 'user', targetEntity: TeamMember::class, cascade: ['persist'])]
+    private Collection $teamMemberships;
 
     public function __construct()
     {
-        $this->teams = new ArrayCollection();
+        $this->teamMemberships = new ArrayCollection();
         $this->managedTeams = new ArrayCollection();
     }
 
@@ -161,20 +162,28 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         return $this;
     }
 
+    /** @return Collection<int, TeamMember> */
+    public function getTeamMemberships(): Collection
+    {
+        return $this->teamMemberships;
+    }
+
+    /** @return Collection<int, Team> the teams this user belongs to, derived from their memberships */
     public function getTeams(): Collection
     {
-        return $this->teams;
+        return new ArrayCollection(
+            array_values(array_unique(
+                array_map(fn (TeamMember $m) => $m->getTeam(), $this->teamMemberships->toArray()),
+                SORT_REGULAR
+            ))
+        );
     }
-    public function addTeam(Team $team): static
+
+    public function addTeamMembership(TeamMember $teamMember): static
     {
-        if (!$this->teams->contains($team)) {
-            $this->teams->add($team);
-            // create a TeamMember entity and link it to this User and the Team,
-            // because Team::addMembership() expects a TeamMember instance
-            $teamMember = new TeamMember();
+        if (!$this->teamMemberships->contains($teamMember)) {
+            $this->teamMemberships->add($teamMember);
             $teamMember->setUser($this);
-            $teamMember->setTeam($team);
-            $team->addMembership($teamMember);
         }
         return $this;
     }
