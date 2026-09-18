@@ -50,6 +50,14 @@ RUN npm run build
 # Production image to serve built static files
 FROM base as final
 
+# Render passes env vars (from render.yaml) as Docker build ARGs
+# automatically, but only for ARGs this Dockerfile actually declares. Vite
+# bakes process.env.REACT_APP_* values in at build time (inside `npm run
+# build` below, via vite-plugin-env-compatible), so without this the build
+# silently falls back to the hardcoded default (http://earlybird-api) in
+# src/resources/api-constants.ts instead of the real backend URL.
+ARG REACT_APP_API_BASE_URL
+
 # Install all dependencies (including devDependencies, for build)
 COPY package.json package-lock.json ./
 RUN npm ci

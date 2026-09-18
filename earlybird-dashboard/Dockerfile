@@ -3,6 +3,14 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
+# Render passes dashboard env vars (from render.yaml) as Docker build ARGs
+# automatically, but only for ARGs this Dockerfile actually declares. Vite
+# bakes import.meta.env.VITE_* values in at build time (inside `pnpm run
+# build` below), so without this the build silently falls back to each
+# file's hardcoded default (http://earlybird-api) instead of the real
+# backend URL.
+ARG VITE_API_BASE_URL
+
 # Copy package files
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 
