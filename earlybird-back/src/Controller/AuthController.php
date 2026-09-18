@@ -44,8 +44,8 @@ class AuthController extends AbstractController
         } else {
             $user = $em->getRepository(User::class)->findOneBy(['email' => $email]);
 
-            // Vérification du mot de passe (en clair pour le développement)
-            if (!$user || $user->getPassword() !== $password) {
+            // Vérification du mot de passe (hashé via password_hash/bcrypt)
+            if (!$user || !password_verify($password, $user->getPassword())) {
                 // Message générique pour ne pas révéler si l'utilisateur existe
                 $payload = ['error' => 'Email ou mot de passe incorrect'];
                 $status = 401;

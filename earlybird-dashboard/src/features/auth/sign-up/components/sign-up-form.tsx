@@ -2,7 +2,12 @@ import { useState } from 'react'
 import { z } from 'zod'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
+import { useNavigate } from '@tanstack/react-router'
+import { Loader2, UserPlus } from 'lucide-react'
+import { toast } from 'sonner'
+import axios from 'axios'
 import { IconFacebook, IconGithub } from '@/assets/brand-icons'
+import { useAuthStore } from '@/stores/auth-store'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import {
@@ -38,6 +43,8 @@ export function SignUpForm({
   ...props
 }: React.HTMLAttributes<HTMLFormElement>) {
   const [isLoading, setIsLoading] = useState(false)
+  const navigate = useNavigate()
+  const { auth } = useAuthStore()
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -48,14 +55,84 @@ export function SignUpForm({
     },
   })
 
-  function onSubmit(data: z.infer<typeof formSchema>) {
+  async function onSubmit(data: z.infer<typeof formSchema>) {
     setIsLoading(true)
-    // eslint-disable-next-line no-console
-    console.log(data)
 
-    setTimeout(() => {
+    try {
+      const API_URL =
+        import.meta.env.VITE_API_BASE_URL || 'http://earlybird-api'
+
+      // Créer le compte
+      await axios.post(`${API_URL}/users`, {
+        email: data.email,
+        password: data.password,
+      })
+
+      // Connecter automatiquement l'utilisateur nouvellement créé
+      const loginResponse = await axios.post(`${API_URL}/login`, {
+        email: data.email,
+        password: data.password,
+      })
+
+      const { token, refresh_token, user } = loginResponse.data
+
+      localStorage.setItem('refresh_token_local', refresh_token)
+      document.cookie = `thisisjustarandomstring=${token}; path=/; max-age=${7 * 24 * 60 * 60}`
+
+      auth.setUser({
+        id: user.id,
+        email: user.email,
+        firstname: user.firstname,
+        lastname: user.lastname,
+        roles: user.roles,
+      })
+      auth.setAccessToken(token)
+
+      toast.success('Compte créé avec succès !')
+      navigate({ to: '/', replace: true })
+    } catch (error) {
+      console.error('Erreur lors de la création du compte:', error)
+
+      if (axios.isAxiosError(error)) {
+        if (error.response) {
+          const status = error.response.status
+          const errorData =
+            error.response.data?.error ||
+            'Erreur lors de la création du compte'
+
+          switch (status) {
+            case 400:
+              toast.error(errorData)
+              break
+            case 409:
+              toast.error('Un compte existe déjà avec cet email.')
+              break
+            case 500:
+            case 502:
+            case 503:
+            case 504:
+              toast.error(
+                'Le serveur rencontre un problème. Veuillez réessayer plus tard.'
+              )
+              break
+            default:
+              toast.error(errorData)
+          }
+        } else if (error.request) {
+          toast.error(
+            'Impossible de contacter le serveur. Vérifiez votre connexion internet ou que le backend est démarré.'
+          )
+        } else {
+          toast.error(
+            'Une erreur est survenue lors de la configuration de la requête.'
+          )
+        }
+      } else {
+        toast.error('Une erreur inattendue est survenue.')
+      }
+    } finally {
       setIsLoading(false)
-    }, 3000)
+    }
   }
 
   return (
@@ -105,6 +182,7 @@ export function SignUpForm({
           )}
         />
         <Button className='mt-2' disabled={isLoading}>
+          {isLoading ? <Loader2 className='animate-spin' /> : <UserPlus />}
           Create Account
         </Button>
 
