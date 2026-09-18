@@ -39,12 +39,16 @@ services:
         value: https://earlybird-back.onrender.com
       # Not set here on purpose (sync: false). The JWT key pair used to be
       # committed to git (a security issue -- see DEPLOY.md); it's now
-      # generated locally and kept out of git. Paste the contents of your
-      # local earlybird-back/config/jwt/private.pem and public.pem into these
-      # two env vars in the Render dashboard after the service is created.
-      - key: JWT_PRIVATE_KEY_PEM
+      # generated locally and kept out of git. These are base64-encoded
+      # (not raw PEM) because pasting a raw multi-line PEM into Render's
+      # env var field is prone to losing its line breaks, which silently
+      # corrupts the key. Generate the values with:
+      #   base64 -i earlybird-back/config/jwt/private.pem | tr -d '\n'
+      #   base64 -i earlybird-back/config/jwt/public.pem  | tr -d '\n'
+      # and paste the single-line output into these two env vars.
+      - key: JWT_PRIVATE_KEY_PEM_B64
         sync: false
-      - key: JWT_PUBLIC_KEY_PEM
+      - key: JWT_PUBLIC_KEY_PEM_B64
         sync: false
 
   # React/Vite kiosk + employee frontend (earlybird-front/Dockerfile)
