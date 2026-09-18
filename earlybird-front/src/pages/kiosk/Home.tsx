@@ -4,6 +4,7 @@ import DateTime from '../../components/DateTime'
 import AnimatedPopup from '../../components/AnimatedPopup'
 import '../../styles/kiosk_login.css'
 import '../../styles/kiosk_home_main.css'
+import { API_BASE_URL } from '../../resources/api-constants'
 
 const users = [
     { id: 'leonie-raymonde', name: 'Leonie Raymonde', role: 'admin', status: 'available' },
@@ -63,7 +64,7 @@ const KioskHomePage: React.FC = () => {
         setLoading(true)
         setError('')
         try {
-            const res = await fetch('http://earlybird-api/clocks', {
+            const res = await fetch(`${API_BASE_URL}/clocks`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ user_id: parseInt(userId), team_id: parseInt(teamId), type: 'arrival' })
@@ -104,7 +105,7 @@ const KioskHomePage: React.FC = () => {
         setLoading(true)
         setError('')
         try {
-            const res = await fetch('http://earlybird-api/clocks', {
+            const res = await fetch(`${API_BASE_URL}/clocks`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ user_id: parseInt(userId), team_id: parseInt(teamId), type: 'departure' })

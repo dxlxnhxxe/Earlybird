@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import '../../styles/main.sass'
+import { API_BASE_URL } from '../../resources/api-constants'
 
 type TeamKPI = {
   teamId: number
@@ -41,7 +42,7 @@ type ApiDailyWorkTime = {
   average_work_time?: string
 }
 
-const apiBase = 'http://earlybird-api'
+const apiBase = API_BASE_URL
 
 const DashboardIndex: React.FC = () => {
   const [teamKpis, setTeamKpis] = useState<TeamKPI[]>([])

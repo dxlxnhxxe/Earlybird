@@ -36,6 +36,9 @@ RUN composer install --no-interaction --optimize-autoloader
 # ==========================
 # Étape 4 : Exposer le port et lancer le serveur
 # ==========================
+RUN chmod +x docker/entrypoint.sh
+
 EXPOSE 8000
 
+ENTRYPOINT ["docker/entrypoint.sh"]
 CMD ["php", "-S", "0.0.0.0:8000", "-t", "public"]

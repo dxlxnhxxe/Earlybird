@@ -1,0 +1,76 @@
+# Render Blueprint for the Earlybird stack: backend, frontend, dashboard.
+# Postgres is NOT one of these resources -- it's hosted separately on Neon
+# (see below) because Render's free managed Postgres expires after ~30 days.
+#
+# Deploy: on render.com, "New" -> "Blueprint", point it at this repo, branch "develop".
+# Render creates the 3 services below in one go. See DEPLOY.md for the full checklist
+# (things a blueprint can't automate: pasting in the DATABASE_URL/JWT/Clerk secrets,
+# loading the initial DB dump, and confirming the actual service URLs).
+#
+# All 3 services use Render's free tier: they sleep after 15 min idle and take
+# about a minute to wake back up on the next request.
+
+# Postgres is hosted on Neon (neon.tech), not Render -- Neon's free tier has
+# no expiration (Render's managed free Postgres deletes itself after ~44
+# days). See DEPLOY.md for the actual connection string to paste in below.
+services:
+  # Symfony API (earlybird-back/Dockerfile)
+  - type: web
+    name: earlybird-back
+    runtime: docker
+    plan: free
+    dockerfilePath: ./earlybird-back/Dockerfile
+    dockerContext: ./earlybird-back
+    envVars:
+      - key: APP_ENV
+        value: prod
+      - key: APP_SECRET
+        generateValue: true
+      # Not set here on purpose (sync: false). Paste the Neon connection string
+      # from DEPLOY.md into this env var in the Render dashboard.
+      - key: DATABASE_URL
+        sync: false
+      # Allows the deployed frontend + dashboard to call this API, plus localhost for
+      # local dev. Update the onrender.com hostnames below if your actual service URLs
+      # come out different from the predicted earlybird-front / earlybird-dashboard ones.
+      - key: CORS_ALLOW_ORIGIN
+        value: '^https?://(localhost|127\.0\.0\.1)(:[0-9]+)?$|^https://earlybird-front\.onrender\.com$|^https://earlybird-dashboard\.onrender\.com$'
+      - key: DEFAULT_URI
+        value: https://earlybird-back.onrender.com
+      # Not set here on purpose (sync: false). The JWT key pair used to be
+      # committed to git (a security issue -- see DEPLOY.md); it's now
+      # generated locally and kept out of git. Paste the contents of your
+      # local earlybird-back/config/jwt/private.pem and public.pem into these
+      # two env vars in the Render dashboard after the service is created.
+      - key: JWT_PRIVATE_KEY_PEM
+        sync: false
+      - key: JWT_PUBLIC_KEY_PEM
+        sync: false
+
+  # React/Vite kiosk + employee frontend (earlybird-front/Dockerfile)
+  - type: web
+    name: earlybird-front
+    runtime: docker
+    plan: free
+    dockerfilePath: ./earlybird-front/Dockerfile
+    dockerContext: ./earlybird-front
+    envVars:
+      # Baked in at build time (Vite). Must match the backend's actual URL below.
+      - key: REACT_APP_API_BASE_URL
+        value: https://earlybird-back.onrender.com
+
+  # Vite/React admin dashboard (earlybird-dashboard/Dockerfile)
+  - type: web
+    name: earlybird-dashboard
+    runtime: docker
+    plan: free
+    dockerfilePath: ./earlybird-dashboard/Dockerfile
+    dockerContext: ./earlybird-dashboard
+    envVars:
+      # Baked in at build time (Vite). Must match the backend's actual URL below.
+      - key: VITE_API_BASE_URL
+        value: https://earlybird-back.onrender.com
+      # Not set here on purpose (sync: false) -- add your real Clerk publishable key
+      # as a secret in the Render dashboard after the service is created.
+      - key: VITE_CLERK_PUBLISHABLE_KEY
+        sync: false

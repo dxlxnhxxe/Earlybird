@@ -3,6 +3,7 @@ import DateTime from '../../components/DateTime'
 import { useNavigate, useParams } from 'react-router-dom'
 import Spinner from '../../components/Spinner'
 import '../../styles/kiosk_index.sass'
+import { API_BASE_URL } from '../../resources/api-constants'
 
 const IndexPage: React.FC = () => {
     const navigate = useNavigate()
@@ -16,7 +17,7 @@ const IndexPage: React.FC = () => {
             try {
                 // If teamId is provided, fetch team details and its members
                 if (teamId) {
-                    const teamResponse = await fetch(`http://earlybird-api/teams/${teamId}`)
+                    const teamResponse = await fetch(`${API_BASE_URL}/teams/${teamId}`)
                     if (teamResponse.ok) {
                         const teamData = await teamResponse.json()
                         setTeam(teamData)
@@ -24,13 +25,13 @@ const IndexPage: React.FC = () => {
                     } else {
                         console.error('Failed to fetch team:', teamResponse.statusText)
                         // Fallback to all users if team not found
-                        const usersResponse = await fetch('http://earlybird-api/users')
+                        const usersResponse = await fetch(`${API_BASE_URL}/users`)
                         const usersData = await usersResponse.json()
                         setUsers(usersData)
                     }
                 } else {
                     // If no teamId, fetch all users
-                    const usersResponse = await fetch('http://earlybird-api/users')
+                    const usersResponse = await fetch(`${API_BASE_URL}/users`)
                     const usersData = await usersResponse.json()
                     setUsers(usersData)
                 }

@@ -4,6 +4,7 @@ import Spinner from '../../components/Spinner';
 import { useNavigate } from 'react-router-dom';
 import { useSearchParams } from 'react-router-dom';
 import '../../styles/kiosk_login.css';
+import { API_BASE_URL } from '../../resources/api-constants'
 
 interface User {
   id: number;
@@ -26,7 +27,7 @@ const LoginPin = () => {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    fetch('http://earlybird-api/users')
+    fetch(`${API_BASE_URL}/users`)
       .then(res => res.json())
       .then(data => {
         setUsers(data);
