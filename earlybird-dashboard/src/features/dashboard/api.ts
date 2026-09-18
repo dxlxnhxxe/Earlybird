@@ -175,56 +175,28 @@ export type TeamKpis = {
 
 export async function fetchKpis(): Promise<DashboardKpis> {
   const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://earlybird-api'
-  // Preferred endpoint from Symfony backend: /reports (global)
-  try {
-    const res = await fetch(`${baseUrl}/reports`)
-    if (res.ok) {
-      const json = await res.json()
-      const k = json.kpis ?? json
-      if (k) {
-        return {
-          totalUsers: Number(k.total_users ?? 0),
-          totalClocks: Number(k.total_clocks ?? 0),
-          averageClocksPerUser: Number(k.average_clocks_per_user ?? 0),
-          mostActiveUser: k.most_active_user ?? null,
-          lastActivity: k.last_activity ?? null,
-        }
-      }
-    }
-  } catch (e) {
-    // fall through to alternate endpoints
+  // The only real backend route for global KPIs is /reports.
+  // (Previously this also tried nonexistent /kpis and /metrics/kpis endpoints,
+  // then silently fell back to fabricated random numbers if every attempt
+  // failed -- so a genuine API outage looked like a working dashboard with
+  // made-up stats instead of surfacing the "Failed to load KPIs" error state
+  // the UI already has. Now a real failure is allowed to throw so React
+  // Query's error state actually fires.)
+  const res = await fetch(`${baseUrl}/reports`)
+  if (!res.ok) {
+    throw new Error(`Failed to fetch KPIs (status ${res.status})`)
   }
-
-  // Alternate endpoints for flexibility
-  const endpoints = ['/kpis', '/metrics/kpis']
-  for (const ep of endpoints) {
-    try {
-      const res = await fetch(`${baseUrl}${ep}`)
-      if (res.ok) {
-        const k = await res.json()
-        if ('total_users' in k || 'totalClocks' in k) {
-          return {
-            totalUsers: Number(k.total_users ?? k.totalUsers ?? 0),
-            totalClocks: Number(k.total_clocks ?? k.totalClocks ?? 0),
-            averageClocksPerUser: Number(k.average_clocks_per_user ?? k.averageClocksPerUser ?? 0),
-            mostActiveUser: k.most_active_user ?? k.mostActiveUser ?? null,
-            lastActivity: k.last_activity ?? k.lastActivity ?? null,
-          }
-        }
-      }
-    } catch {}
+  const json = await res.json()
+  const k = json.kpis ?? json
+  if (!k) {
+    throw new Error('Unexpected KPIs response shape')
   }
-
-  // Fallback mock when API not available (e.g., local dev)
-  const base = 50
-  const totalUsers = 32 + Math.floor(Math.random() * base)
-  const totalClocks = Math.floor(totalUsers * (2 + Math.random() * 4))
   return {
-    totalUsers,
-    totalClocks,
-    averageClocksPerUser: Number((totalClocks / Math.max(totalUsers, 1)).toFixed(2)),
-    mostActiveUser: null,
-    lastActivity: null,
+    totalUsers: Number(k.total_users ?? 0),
+    totalClocks: Number(k.total_clocks ?? 0),
+    averageClocksPerUser: Number(k.average_clocks_per_user ?? 0),
+    mostActiveUser: k.most_active_user ?? null,
+    lastActivity: k.last_activity ?? null,
   }
 }
 
