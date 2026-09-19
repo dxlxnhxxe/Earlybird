@@ -1,10 +1,9 @@
 #!/bin/sh
-# Blocks a commit whose staged changes look like they contain a real secret
-# (private key material, or a non-empty value assigned to a var whose name
-# says PASSWORD/SECRET/PASSPHRASE/TOKEN/API_KEY, or a credential embedded in
-# a connection-string-style URL). This repo has leaked secrets this way
-# twice already (see DEPLOY.md section 5) -- this hook exists to make a
-# third time much harder.
+# Blocks a commit whose staged changes look like they contain a real secret:
+# private key material, a non-empty value assigned to a var whose name says
+# PASSWORD/SECRET/PASSPHRASE/TOKEN/API_KEY, or a credential embedded in a
+# connection-string-style URL. See DEPLOY.md section 5 for how secrets are
+# meant to be handled in this repo instead.
 #
 # Not a substitute for care, and not exhaustive: it only looks at staged
 # text diffs, so a secret pasted into a binary file or one that doesn't

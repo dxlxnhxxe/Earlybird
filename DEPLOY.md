@@ -9,22 +9,18 @@ intentionally leaves out the `reverse-proxy` service from
 public HTTPS URL, so the nginx reverse-proxy (which routed by hostname, e.g.
 `earlybird-api`) isn't needed and isn't part of this Blueprint.
 
-## 0. Your Neon database (already created)
+## 0. Your Neon database
 
-A free Neon project called `earlybird` was already created for you (Postgres
-16, matching what `docker-compose.yml` uses locally). Get its connection
-string yourself at [console.neon.tech](https://console.neon.tech) -- open
-the `earlybird` project, Connect, copy the connection string for the
-`earlybird` database. You'll paste it into Render as `DATABASE_URL` in step 1
-below.
+A free Neon project called `earlybird` was already created (Postgres 16,
+matching what `docker-compose.yml` uses locally). Get the connection string
+at [console.neon.tech](https://console.neon.tech) -- open the `earlybird`
+project, Connect, copy the connection string for the `earlybird` database.
+You'll paste it into Render as `DATABASE_URL` in step 1 below.
 
-**Do not paste the connection string into this file, a commit, or anywhere
-else that ends up in git.** An earlier version of this doc did exactly that
-(committed the real string in plaintext) and GitHub's/Neon's secret scanning
-flagged it within hours of the push -- the password has since been rotated,
-but treat that as a close call, not a non-issue. `DATABASE_URL` is
-`sync: false` in `render.yaml` specifically so Render prompts you for it
-interactively instead of it living in a file; keep it that way.
+Don't put that connection string in a file or a commit -- `DATABASE_URL` is
+`sync: false` in `render.yaml` specifically so Render prompts for it
+interactively instead. Same goes for any other real secret in this project;
+see section 5 for how those are handled.
 
 ## 1. Deploy the Blueprint
 
@@ -37,7 +33,8 @@ interactively instead of it living in a file; keep it that way.
 5. You'll be prompted for the env vars marked `sync: false` in the blueprint
    -- paste in:
    - `DATABASE_URL`: the Neon connection string from step 0 above.
-   - `JWT_PRIVATE_KEY_PEM` / `JWT_PUBLIC_KEY_PEM`: see section 5 below.
+   - `JWT_PASSPHRASE`, `JWT_PRIVATE_KEY_PEM_B64`, `JWT_PUBLIC_KEY_PEM_B64`: see
+     section 5 below.
    (There's no Clerk key to provide -- the dashboard's `/clerk` route is
    unused demo code left over from the admin-dashboard template it's built
    on; the app's real login doesn't need it, so it's not in the blueprint.)
@@ -96,46 +93,37 @@ running it is all you need -- no separate Doctrine migrations step required.
   Render is usually able to auto-detect this, but if a service's first deploy
   fails with a "no open ports detected" error, that's the fix needed.
 
-## 5. JWT keys and app secrets (rotated twice now -- read this)
+## 5. How secrets are handled
 
-This repo has leaked committed secrets twice:
+Nothing real ever gets committed. The pattern:
 
-1. The original JWT key pair + passphrase were committed despite `.gitignore`
-   trying to exclude them.
-2. The "rotated" fix for that mistakenly left the new `JWT_PASSPHRASE` (and
-   the local-dev `APP_SECRET` in `.env.dev`) as literal values inside
-   `earlybird-back/.env` / `.env.dev` -- which are *meant* to be committed
-   (Symfony's convention), so that "fix" was itself still a leak. GitGuardian
-   flagged it.
+- `earlybird-back/.env` and `.env.dev` are tracked in git, but only ever hold
+  empty placeholders for anything sensitive (`JWT_PASSPHRASE=`,
+  `APP_SECRET=`, `DATABASE_URL=`) -- that's Symfony's own convention for
+  these files.
+- The real values live in `earlybird-back/.env.local` and `.env.dev.local`.
+  Symfony loads these automatically and they override the placeholders above.
+  Both are covered by `.gitignore` (`/.env.local`, `/.env.*.local`) and never
+  get committed.
+- The JWT key pair lives at `earlybird-back/config/jwt/{private,public}.pem`,
+  generated locally and also git-ignored (`/config/jwt/*.pem`).
+- There's also a pre-commit hook (`.githooks/pre-commit`, wired in via
+  `git config core.hooksPath .githooks`) that blocks a commit if the staged
+  diff looks like it contains a private key, a non-placeholder
+  password/secret/token value, or a connection string with credentials baked
+  in. Worth keeping active if you clone this fresh -- run the same
+  `git config` line to turn it on.
 
-The actual fix now in place:
+Render never sees `config/jwt/*.pem` either, since its build just clones the
+repo -- `earlybird-back/docker/entrypoint.sh` (wired in via the Dockerfile's
+`ENTRYPOINT`) writes the key pair at container start from env vars instead,
+if the files aren't already present in the image. Locally with
+docker-compose nothing changes -- the real files are mounted from disk.
 
-- `earlybird-back/.env` and `.env.dev` only ever contain empty placeholders
-  for secrets (`JWT_PASSPHRASE=`, `APP_SECRET=`, `DATABASE_URL=`) -- exactly
-  as Symfony's own template intends, and safe to commit.
-- The real values live in `earlybird-back/.env.local` and `.env.dev.local`,
-  which were already covered by `.gitignore` (`/.env.local`,
-  `/.env.*.local`) and are **never** committed. Symfony loads these
-  automatically and they override the empty placeholders.
-- The JWT key pair (`earlybird-back/config/jwt/{private,public}.pem`) and the
-  passphrase it was encrypted with have been rotated again, since the
-  previous ones must be treated as compromised (they were briefly live in a
-  tracked file). The old keys/passphrases -- both the original and the first
-  "rotated" set -- no longer verify anything once you deploy with the new
-  ones.
-- The `.pem` files are git-ignored (`/config/jwt/*.pem`) and were never
-  re-added. Render's build clones from git, so it won't have them either;
-  `earlybird-back/docker/entrypoint.sh` (wired in via the Dockerfile's
-  `ENTRYPOINT`) writes them at container start from the
-  `JWT_PRIVATE_KEY_PEM_B64` / `JWT_PUBLIC_KEY_PEM_B64` env vars instead, if
-  the files aren't already present in the image. Locally, via
-  docker-compose, nothing changes -- the real files are mounted from disk
-  and those env vars are simply unset.
-
-**On Render, set these three env vars manually** (all `sync: false` in
+**Set these three env vars manually on Render** (all `sync: false` in
 `render.yaml`, so Render prompts for them and never stores them in a file):
 
-- `JWT_PASSPHRASE`: the exact passphrase the current `private.pem` was
+- `JWT_PASSPHRASE`: the exact passphrase your local `private.pem` was
   encrypted with.
 - `JWT_PRIVATE_KEY_PEM_B64` / `JWT_PUBLIC_KEY_PEM_B64`: base64 of the two
   `.pem` files, generated with:
@@ -143,21 +131,13 @@ The actual fix now in place:
   base64 -i earlybird-back/config/jwt/private.pem | tr -d '\n'
   base64 -i earlybird-back/config/jwt/public.pem  | tr -d '\n'
   ```
-  (base64, not raw PEM, because pasting a raw multi-line PEM into Render's
-  env var field is prone to losing its line breaks, which silently corrupts
-  the key.)
+  Base64, not raw PEM, because pasting a raw multi-line PEM into Render's env
+  var field is prone to losing its line breaks, which silently corrupts the
+  key. Paste each result as a single value with no extra quotes or blank
+  lines -- Render's `base64 -d` at container start will fail loudly
+  ("invalid input") if anything got mangled in the copy-paste.
 
-If you already have a live Render deploy from before this fix, update these
-three env vars on the existing `earlybird-back` service and redeploy --
-everyone's current login session will be invalidated (JWTs signed with the
-old key stop verifying), which is expected; they just need to sign in again.
-
-**Still true:** the *old*, already-rotated secrets (from both leaks above)
-remain visible in this repo's git history (past commits) even though nothing
-live depends on them anymore -- finding them there doesn't let anyone do
-anything, since they've been superseded. If you want them gone from history
-entirely, that requires rewriting git history (`git filter-repo` + a force
-push), which changes every commit hash on every branch and could break other
-clones or open PRs. Given this repo has several other branches (`main`,
-`develop-dylan(team)`, `nerimene-tdtpj`, etc.), this hasn't been done -- say
-the word if you want it done and understand the trade-off.
+If you ever rotate these (new key pair, new passphrase), update all three env
+vars on the `earlybird-back` service and redeploy. Everyone's current login
+session gets invalidated when you do -- JWTs signed with the old key stop
+verifying -- so just expect to sign in again afterward.

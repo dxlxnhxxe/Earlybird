@@ -37,12 +37,11 @@ services:
         value: '^https?://(localhost|127\.0\.0\.1)(:[0-9]+)?$|^https://earlybird-front\.onrender\.com$|^https://earlybird-dashboard\.onrender\.com$'
       - key: DEFAULT_URI
         value: https://earlybird-back.onrender.com
-      # Not set here on purpose (sync: false). The JWT key pair used to be
-      # committed to git (a security issue -- see DEPLOY.md); it's now
-      # generated locally and kept out of git. These are base64-encoded
-      # (not raw PEM) because pasting a raw multi-line PEM into Render's
-      # env var field is prone to losing its line breaks, which silently
-      # corrupts the key. Generate the values with:
+      # Not set here on purpose (sync: false). The JWT key pair is generated
+      # locally and kept out of git entirely (see DEPLOY.md section 5). These
+      # are base64-encoded (not raw PEM) because pasting a raw multi-line PEM
+      # into Render's env var field is prone to losing its line breaks, which
+      # silently corrupts the key. Generate the values with:
       #   base64 -i earlybird-back/config/jwt/private.pem | tr -d '\n'
       #   base64 -i earlybird-back/config/jwt/public.pem  | tr -d '\n'
       # and paste the single-line output into these two env vars.
@@ -50,11 +49,9 @@ services:
         sync: false
       - key: JWT_PUBLIC_KEY_PEM_B64
         sync: false
-      # Not set here on purpose (sync: false). This used to fall back silently
-      # to the JWT_PASSPHRASE baked into the committed earlybird-back/.env --
-      # that file no longer carries a real value (see DEPLOY.md), so this must
-      # be set explicitly here or JWT signing breaks in production. Must match
-      # the passphrase the private.pem above was actually encrypted with.
+      # Not set here on purpose (sync: false). Must match the passphrase the
+      # private.pem above was actually encrypted with -- see DEPLOY.md
+      # section 5.
       - key: JWT_PASSPHRASE
         sync: false
 
