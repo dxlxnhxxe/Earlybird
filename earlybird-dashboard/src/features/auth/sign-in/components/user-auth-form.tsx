@@ -220,7 +220,7 @@ export function UserAuthForm({
           </div>
         </div>
 
-        <div className='grid grid-cols-2 gap-2'>
+        <div className='grid grid-cols-1 gap-2'>
           <Button
             variant='outline'
             type='button'
