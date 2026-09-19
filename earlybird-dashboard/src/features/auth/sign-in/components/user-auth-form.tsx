@@ -3,10 +3,9 @@ import { z } from 'zod'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Link, useNavigate } from '@tanstack/react-router'
-import { Loader2, LogIn } from 'lucide-react'
+import { Loader2, LogIn, Shield, UserRound } from 'lucide-react'
 import { toast } from 'sonner'
 import axios from 'axios'
-import { IconFacebook, IconGithub } from '@/assets/brand-icons'
 import { useAuthStore } from '@/stores/auth-store'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
@@ -31,6 +30,15 @@ const formSchema = z.object({
     .min(7, 'Password must be at least 7 characters long'),
 })
 
+// Seeded demo accounts, used by the "Sign in as Admin / Employee" quick-access
+// buttons below so a visitor exploring this as a portfolio project can see the
+// full app (admin: Teams/Users management + all KPI reporting; employee: the
+// scoped, non-admin view) without needing real credentials handed to them.
+const DEMO_ACCOUNTS = {
+  admin: { email: 'clara.admin@example.com', password: 'clara123456' },
+  employee: { email: 'alice.durand@example.com', password: 'alice123456' },
+} as const
+
 interface UserAuthFormProps extends React.HTMLAttributes<HTMLFormElement> {
   redirectTo?: string
 }
@@ -40,7 +48,12 @@ export function UserAuthForm({
   redirectTo,
   ...props
 }: UserAuthFormProps) {
-  const [isLoading, setIsLoading] = useState(false)
+  // Tracks which login is in flight so only that button shows a spinner,
+  // while all three stay disabled for the duration of any request.
+  const [loadingMode, setLoadingMode] = useState<
+    'form' | 'admin' | 'employee' | null
+  >(null)
+  const isLoading = loadingMode !== null
   const navigate = useNavigate()
   const { auth } = useAuthStore()
 
@@ -52,15 +65,13 @@ export function UserAuthForm({
     },
   })
 
-  async function onSubmit(data: z.infer<typeof formSchema>) {
-    setIsLoading(true)
-
+  async function performLogin(email: string, password: string) {
     try {
       const API_URL = import.meta.env.VITE_API_BASE_URL || 'http://earlybird-api'
 
       const response = await axios.post(`${API_URL}/login`, {
-        email: data.email,
-        password: data.password,
+        email,
+        password,
       })
 
       const { token, refresh_token, user } = response.data
@@ -132,8 +143,25 @@ export function UserAuthForm({
 
       // NE PAS relancer l'erreur - elle est complètement gérée ici
       // return false pour indiquer que le formulaire n'a pas été soumis avec succès
+    }
+  }
+
+  async function onSubmit(data: z.infer<typeof formSchema>) {
+    setLoadingMode('form')
+    try {
+      await performLogin(data.email, data.password)
     } finally {
-      setIsLoading(false)
+      setLoadingMode(null)
+    }
+  }
+
+  async function signInAs(mode: 'admin' | 'employee') {
+    setLoadingMode(mode)
+    try {
+      const { email, password } = DEMO_ACCOUNTS[mode]
+      await performLogin(email, password)
+    } finally {
+      setLoadingMode(null)
     }
   }
 
@@ -177,7 +205,7 @@ export function UserAuthForm({
           )}
         />
         <Button className='mt-2' disabled={isLoading}>
-          {isLoading ? <Loader2 className='animate-spin' /> : <LogIn />}
+          {loadingMode === 'form' ? <Loader2 className='animate-spin' /> : <LogIn />}
           Sign in
         </Button>
 
@@ -187,17 +215,37 @@ export function UserAuthForm({
           </div>
           <div className='relative flex justify-center text-xs uppercase'>
             <span className='bg-background text-muted-foreground px-2'>
-              Or continue with
+              Try it as a demo
             </span>
           </div>
         </div>
 
         <div className='grid grid-cols-2 gap-2'>
-          <Button variant='outline' type='button' disabled={isLoading}>
-            <IconGithub className='h-4 w-4' /> GitHub
+          <Button
+            variant='outline'
+            type='button'
+            disabled={isLoading}
+            onClick={() => signInAs('admin')}
+          >
+            {loadingMode === 'admin' ? (
+              <Loader2 className='h-4 w-4 animate-spin' />
+            ) : (
+              <Shield className='h-4 w-4' />
+            )}
+            Sign in as Admin
           </Button>
-          <Button variant='outline' type='button' disabled={isLoading}>
-            <IconFacebook className='h-4 w-4' /> Facebook
+          <Button
+            variant='outline'
+            type='button'
+            disabled={isLoading}
+            onClick={() => signInAs('employee')}
+          >
+            {loadingMode === 'employee' ? (
+              <Loader2 className='h-4 w-4 animate-spin' />
+            ) : (
+              <UserRound className='h-4 w-4' />
+            )}
+            Sign in as Employee
           </Button>
         </div>
       </form>
