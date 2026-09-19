@@ -1,0 +1,41 @@
+#!/bin/sh
+# Blocks a commit whose staged changes look like they contain a real secret
+# (private key material, or a non-empty value assigned to a var whose name
+# says PASSWORD/SECRET/PASSPHRASE/TOKEN/API_KEY, or a credential embedded in
+# a connection-string-style URL). This repo has leaked secrets this way
+# twice already (see DEPLOY.md section 5) -- this hook exists to make a
+# third time much harder.
+#
+# Not a substitute for care, and not exhaustive: it only looks at staged
+# text diffs, so a secret pasted into a binary file or one that doesn't
+# match these patterns can still slip through. Bypass with `git commit
+# --no-verify` only if you are certain a match is a false positive.
+
+added_lines=$(git diff --cached -U0 --no-color -- . ':(exclude)*.lock' ':(exclude)package-lock.json' \
+  | grep -E '^\+' | grep -Ev '^\+\+\+')
+
+fail=0
+
+if printf '%s\n' "$added_lines" | grep -qE -- '-----BEGIN [A-Z ]*PRIVATE KEY-----'; then
+  echo "pre-commit: refusing to commit -- a PEM private key block is in the staged diff." >&2
+  fail=1
+fi
+
+if printf '%s\n' "$added_lines" | grep -qEi '^\+[[:space:]]*[A-Z0-9_]*(PASSWORD|PASSPHRASE|SECRET|API_KEY|ACCESS_KEY|PRIVATE_KEY)[A-Z0-9_]*[[:space:]]*[:=][[:space:]]*["'"'"']?[^"'"'"'[:space:]]{6,}'; then
+  echo "pre-commit: refusing to commit -- a non-empty PASSWORD/SECRET/PASSPHRASE/KEY-looking value is in the staged diff." >&2
+  echo "  If this is a placeholder or example value, adjust the hook or use --no-verify." >&2
+  fail=1
+fi
+
+if printf '%s\n' "$added_lines" | grep -qE '^\+.*(postgres(ql)?|mysql|mongodb(\+srv)?|redis|amqp)://[^@[:space:]/]+:[^@[:space:]/]+@'; then
+  echo "pre-commit: refusing to commit -- a connection string with an embedded username:password is in the staged diff." >&2
+  fail=1
+fi
+
+if [ "$fail" -eq 1 ]; then
+  echo "" >&2
+  echo "Put real secrets in an untracked .env.local / .env.*.local file instead (see DEPLOY.md section 5)." >&2
+  exit 1
+fi
+
+exit 0

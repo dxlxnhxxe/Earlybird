@@ -96,37 +96,68 @@ running it is all you need -- no separate Doctrine migrations step required.
   Render is usually able to auto-detect this, but if a service's first deploy
   fails with a "no open ports detected" error, that's the fix needed.
 
-## 5. JWT keys (rotated, no longer committed)
+## 5. JWT keys and app secrets (rotated twice now -- read this)
 
-The old JWT key pair and passphrase were committed to the repo despite
-`.gitignore` trying to exclude them -- if this repo is public, anyone could
-have forged valid JWTs for your API. This has been fixed:
+This repo has leaked committed secrets twice:
 
-- A brand new key pair and passphrase were generated locally
-  (`earlybird-back/config/jwt/{private,public}.pem`, and the new passphrase is
-  in `earlybird-back/.env`). The old ones are no longer valid anywhere once
-  you deploy with the new files.
-- Those two `.pem` files are no longer tracked by git (removed with
-  `git rm --cached`) -- they stay on your machine and inside any container
-  built from your machine, but won't be pushed to GitHub going forward.
-- Because the backend's Dockerfile does `COPY . .` from the git checkout,
-  Render's build won't have these files either. `earlybird-back/docker/entrypoint.sh`
-  (wired in via the Dockerfile's new `ENTRYPOINT`) writes them from the
-  `JWT_PRIVATE_KEY_PEM` / `JWT_PUBLIC_KEY_PEM` env vars instead, if the files
-  aren't already present in the image. Locally, via docker-compose, nothing
-  changes -- the real files are still mounted from disk and those env vars
-  are simply unset.
-- When creating the Blueprint on Render (step 1 above), paste the contents of
-  your local `earlybird-back/config/jwt/private.pem` into `JWT_PRIVATE_KEY_PEM`,
-  and `public.pem` into `JWT_PUBLIC_KEY_PEM` (paste the whole file, including
-  the `-----BEGIN/END-----` lines).
+1. The original JWT key pair + passphrase were committed despite `.gitignore`
+   trying to exclude them.
+2. The "rotated" fix for that mistakenly left the new `JWT_PASSPHRASE` (and
+   the local-dev `APP_SECRET` in `.env.dev`) as literal values inside
+   `earlybird-back/.env` / `.env.dev` -- which are *meant* to be committed
+   (Symfony's convention), so that "fix" was itself still a leak. GitGuardian
+   flagged it.
 
-**One thing this doesn't do:** the *old* key and passphrase are still visible
-in this repo's git history (past commits), even though they're no longer used
-anywhere. Anyone who found them there couldn't do anything with them once
-you've deployed with the new key -- but if you want them gone from history
+The actual fix now in place:
+
+- `earlybird-back/.env` and `.env.dev` only ever contain empty placeholders
+  for secrets (`JWT_PASSPHRASE=`, `APP_SECRET=`, `DATABASE_URL=`) -- exactly
+  as Symfony's own template intends, and safe to commit.
+- The real values live in `earlybird-back/.env.local` and `.env.dev.local`,
+  which were already covered by `.gitignore` (`/.env.local`,
+  `/.env.*.local`) and are **never** committed. Symfony loads these
+  automatically and they override the empty placeholders.
+- The JWT key pair (`earlybird-back/config/jwt/{private,public}.pem`) and the
+  passphrase it was encrypted with have been rotated again, since the
+  previous ones must be treated as compromised (they were briefly live in a
+  tracked file). The old keys/passphrases -- both the original and the first
+  "rotated" set -- no longer verify anything once you deploy with the new
+  ones.
+- The `.pem` files are git-ignored (`/config/jwt/*.pem`) and were never
+  re-added. Render's build clones from git, so it won't have them either;
+  `earlybird-back/docker/entrypoint.sh` (wired in via the Dockerfile's
+  `ENTRYPOINT`) writes them at container start from the
+  `JWT_PRIVATE_KEY_PEM_B64` / `JWT_PUBLIC_KEY_PEM_B64` env vars instead, if
+  the files aren't already present in the image. Locally, via
+  docker-compose, nothing changes -- the real files are mounted from disk
+  and those env vars are simply unset.
+
+**On Render, set these three env vars manually** (all `sync: false` in
+`render.yaml`, so Render prompts for them and never stores them in a file):
+
+- `JWT_PASSPHRASE`: the exact passphrase the current `private.pem` was
+  encrypted with.
+- `JWT_PRIVATE_KEY_PEM_B64` / `JWT_PUBLIC_KEY_PEM_B64`: base64 of the two
+  `.pem` files, generated with:
+  ```bash
+  base64 -i earlybird-back/config/jwt/private.pem | tr -d '\n'
+  base64 -i earlybird-back/config/jwt/public.pem  | tr -d '\n'
+  ```
+  (base64, not raw PEM, because pasting a raw multi-line PEM into Render's
+  env var field is prone to losing its line breaks, which silently corrupts
+  the key.)
+
+If you already have a live Render deploy from before this fix, update these
+three env vars on the existing `earlybird-back` service and redeploy --
+everyone's current login session will be invalidated (JWTs signed with the
+old key stop verifying), which is expected; they just need to sign in again.
+
+**Still true:** the *old*, already-rotated secrets (from both leaks above)
+remain visible in this repo's git history (past commits) even though nothing
+live depends on them anymore -- finding them there doesn't let anyone do
+anything, since they've been superseded. If you want them gone from history
 entirely, that requires rewriting git history (`git filter-repo` + a force
-push), which would change every commit hash on every branch and could break
-other clones or open PRs. Given this repo has several other branches
-(`main`, `develop-dylan(team)`, `nerimene-tdtpj`, etc.), this was not done --
-say the word if you want it done and understand the trade-off.
+push), which changes every commit hash on every branch and could break other
+clones or open PRs. Given this repo has several other branches (`main`,
+`develop-dylan(team)`, `nerimene-tdtpj`, etc.), this hasn't been done -- say
+the word if you want it done and understand the trade-off.

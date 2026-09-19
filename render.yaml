@@ -50,6 +50,13 @@ services:
         sync: false
       - key: JWT_PUBLIC_KEY_PEM_B64
         sync: false
+      # Not set here on purpose (sync: false). This used to fall back silently
+      # to the JWT_PASSPHRASE baked into the committed earlybird-back/.env --
+      # that file no longer carries a real value (see DEPLOY.md), so this must
+      # be set explicitly here or JWT signing breaks in production. Must match
+      # the passphrase the private.pem above was actually encrypted with.
+      - key: JWT_PASSPHRASE
+        sync: false
 
   # React/Vite kiosk + employee frontend (earlybird-front/Dockerfile)
   - type: web
